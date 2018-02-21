@@ -1,0 +1,32 @@
+# CZMQ cmake module
+#
+# The following import targets are created
+#
+# ::
+#
+#   czmq-static
+#   czmq
+#
+# This module sets the following variables in your project::
+#
+#   CZMQ_FOUND - true if CZMQ found on the system
+#   CZMQ_INCLUDE_DIR - the directory containing CZMQ headers
+#   CZMQ_LIBRARY - 
+#   CZMQ_STATIC_LIBRARY
+
+@PACKAGE_INIT@
+
+if(NOT TARGET czmq AND NOT TARGET czmq-static)
+  include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+  
+  if(TARGET czmq)
+	  get_target_property(@PROJECT_NAME@_INCLUDE_DIR czmq INTERFACE_INCLUDE_DIRECTORIES)
+  	  get_target_property(@PROJECT_NAME@_LIBRARY czmq LOCATION)
+  endif()
+
+  if(TARGET czmq-static)
+	get_target_property(@PROJECT_NAME@_INCLUDE_DIR czmq-static INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(@PROJECT_NAME@_STATIC_LIBRARY czmq-static LOCATION)
+  endif()
+
+endif()

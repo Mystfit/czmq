@@ -120,11 +120,18 @@ set(OPTIONAL_LIBRARIES)
 # LIBZMQ dependency
 ########################################################################
 hunter_add_package(zeromq)
-find_package(zeromq CONFIG REQUIRED)
-if(BUILD_SHARED_LIBS)
-    set(LIBZMQ_HUNTER_TARGET "ZeroMQ::libzmq")
+set(ZEROMQ_PREFIX "")
+if(HUNTER_ENABLED)
+  set(ZEROMQ_PREFIX "ZeroMQ::")
+  find_package(zeromq CONFIG REQUIRED)
 else()
-    set(LIBZMQ_HUNTER_TARGET "ZeroMQ::libzmq-static")
+  find_package(zeromq REQUIRED)
+endif()
+
+if(BUILD_SHARED_LIBS)
+  set(LIBZMQ_HUNTER_TARGET "${ZEROMQ_PREFIX}libzmq")
+else()
+  set(LIBZMQ_HUNTER_TARGET "${ZEROMQ_PREFIX}libzmq-static")
 endif()
 
 ########################################################################
@@ -289,12 +296,14 @@ ENDIF (ENABLE_DRAFTS)
 source_group("Source Files" FILES ${czmq_sources})
 
 
-option(CZMQ_BUILD_SHARED "Whether or not to build the shared object" OFF)
+option(CZMQ_BUILD_SHARED "Whether or not to build the shared object" ON)
 option(CZMQ_BUILD_STATIC "Whether or not to build the static archive" ON)
 
 if (NOT CZMQ_BUILD_SHARED AND NOT CZMQ_BUILD_STATIC)
   message(FATAL_ERROR "Neither static nor shared library build enabled")
 endif()
+
+set(target_outputs "")
 
 # shared
 if (CZMQ_BUILD_SHARED)
@@ -315,15 +324,12 @@ if (CZMQ_BUILD_SHARED)
     ${LIBZMQ_HUNTER_TARGET}
   )
 
-  install(TARGETS czmq
-    LIBRARY DESTINATION "lib${LIB_SUFFIX}" # .so file
-    ARCHIVE DESTINATION "lib${LIB_SUFFIX}" # .lib file
-    RUNTIME DESTINATION bin                # .dll file
+  target_include_directories (czmq PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   )
 
-  target_include_directories(czmq
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-  )
+  list(APPEND TARGET_OUTPUTS czmq)
 endif()
 
 # static
@@ -342,19 +348,16 @@ if (CZMQ_BUILD_STATIC)
     ${LIBZMQ_HUNTER_TARGET}
   )
 
-  install(TARGETS czmq-static
-    LIBRARY DESTINATION "lib${LIB_SUFFIX}" # .so file
-    ARCHIVE DESTINATION "lib${LIB_SUFFIX}" # .lib file
-    RUNTIME DESTINATION bin                # .dll file
+  target_include_directories (czmq-static PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   )
 
-  target_include_directories(czmq-static
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-  )
   target_compile_definitions(czmq-static
     PUBLIC CZMQ_STATIC
   )
 
+  list(APPEND TARGET_OUTPUTS czmq-static)
 endif()
 
 
@@ -382,6 +385,80 @@ install(
     FILES "${SOURCE_DIR}/src/libczmq.pc"
     DESTINATION "lib${LIB_SUFFIX}/pkgconfig"
 )
+
+########################################################################
+# CMake package install
+########################################################################
+set(PROJECT_NAMESPACE "${PROJECT_NAME}::")
+
+if(NOT CMAKE_INSTALL_LIBDIR)
+  set(CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
+endif()
+
+if(NOT CMAKE_INSTALL_BINDIR)
+  set(CMAKE_INSTALL_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
+endif()
+
+if(NOT CMAKE_INSTALL_INCLUDE_DIR)
+  set(CMAKE_INSTALL_BINDIR "${CMAKE_INSTALL_PREFIX}/include")
+endif()
+
+if (MSVC)
+  install (TARGETS ${TARGET_OUTPUTS}
+          EXPORT ${PROJECT_NAME}-targets
+          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+          COMPONENT SDK)
+  # if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  #   install (TARGETS ${TARGET_OUTPUTS}
+  #           RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  #           ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  #           PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  #           COMPONENT SDK
+  #   )
+  # elseif (BUILD_SHARED)
+  #   install (TARGETS czmq
+  #           RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  #           COMPONENT Runtime
+  #           PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  #   )
+  # endif ()
+else ()
+  install (TARGETS ${TARGET_OUTPUTS}
+          EXPORT ${PROJECT_NAME}-targets
+          PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDE_DIR}
+          RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          FRAMEWORK DESTINATION "Library/Frameworks"
+  )
+endif ()
+
+include(CMakePackageConfigHelpers)
+
+set(CZMQ_CMAKECONFIG_INSTALL_DIR "share/cmake/${PROJECT_NAME}" CACHE STRING "install path for CZMQConfig.cmake")
+
+if (NOT CMAKE_VERSION VERSION_LESS 3.0)
+  export(EXPORT ${PROJECT_NAME}-targets
+        FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake"
+        NAMESPACE ${PROJECT_NAMESPACE}
+  )
+endif()
+configure_package_config_file(${PROJECT_NAME}Config.cmake.in
+                              "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+                              INSTALL_DESTINATION ${CZMQ_CMAKECONFIG_INSTALL_DIR})
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+                                VERSION ${CZMQ_VERSION_MAJOR}.${CZMQ_VERSION_MINOR}.${CZMQ_VERSION_PATCH}
+                                COMPATIBILITY AnyNewerVersion)
+install(EXPORT ${PROJECT_NAME}-targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        DESTINATION ${CZMQ_CMAKECONFIG_INSTALL_DIR}
+        NAMESPACE ${PROJECT_NAMESPACE}
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+              DESTINATION ${CZMQ_CMAKECONFIG_INSTALL_DIR})
 
 ########################################################################
 # executables

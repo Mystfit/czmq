@@ -134,9 +134,11 @@ else()
 endif()
 
 IF (TARGET ${LIBZMQ_HUNTER_TARGET})
-    set(pkg_config_libs_private "${pkg_config_libs_private} -lzmq")
+  set(pkg_config_libs_private "${pkg_config_libs_private} -lzmq")
+  get_target_property(LIBZMQ_INCLUDES ${LIBZMQ_HUNTER_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(${LIBZMQ_INCLUDES})
 ELSE ()
-    message( FATAL_ERROR "ZeroMQ not found." )
+  message( FATAL_ERROR "ZeroMQ not found." )
 ENDIF ()
 
 ########################################################################

@@ -303,11 +303,22 @@ if (NOT CZMQ_BUILD_SHARED AND NOT CZMQ_BUILD_STATIC)
   message(FATAL_ERROR "Neither static nor shared library build enabled")
 endif()
 
+IF (NOT MSVC)
+  # avoid building everything twice for shared + static
+  # only on *nix, as Windows needs different preprocessor defines in static builds
+  add_library (czmq_objects OBJECT ${czmq_sources})
+  set_property(TARGET czmq_objects PROPERTY POSITION_INDEPENDENT_CODE ON)
+ENDIF (NOT MSVC)
+
 set(target_outputs "")
 
 # shared
 if (CZMQ_BUILD_SHARED)
-  add_library(czmq SHARED ${czmq_sources})
+  IF (MSVC)
+    add_library(czmq SHARED ${czmq_sources})
+  ELSE (MSVC)
+    add_library(czmq SHARED $<TARGET_OBJECTS:czmq_objects>)
+  ENDIF (MSVC)
 
   set_target_properties (czmq PROPERTIES
     PUBLIC_HEADER "${public_headers}"
@@ -334,7 +345,11 @@ endif()
 
 # static
 if (CZMQ_BUILD_STATIC)
-  add_library(czmq-static STATIC ${czmq_sources})
+  IF (MSVC)
+    add_library(czmq SHARED ${czmq_sources})
+  ELSE (MSVC)
+    add_library(czmq SHARED $<TARGET_OBJECTS:czmq_objects>)
+  ENDIF (MSVC)
 
   set_target_properties(czmq-static PROPERTIES
     PUBLIC_HEADER "${public_headers}"

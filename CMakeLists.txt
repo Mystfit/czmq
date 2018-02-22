@@ -346,9 +346,9 @@ endif()
 # static
 if (CZMQ_BUILD_STATIC)
   IF (MSVC)
-    add_library(czmq SHARED ${czmq_sources})
+    add_library(czmq-static SHARED ${czmq_sources})
   ELSE (MSVC)
-    add_library(czmq SHARED $<TARGET_OBJECTS:czmq_objects>)
+    add_library(czmq-static SHARED $<TARGET_OBJECTS:czmq_objects>)
   ENDIF (MSVC)
 
   set_target_properties(czmq-static PROPERTIES

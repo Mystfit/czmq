@@ -437,7 +437,7 @@ endif ()
 
 include(CMakePackageConfigHelpers)
 
-set(CZMQ_CMAKECONFIG_INSTALL_DIR "share/cmake/${PROJECT_NAME}" CACHE STRING "install path for CZMQConfig.cmake")
+set(CZMQ_CMAKECONFIG_INSTALL_DIR "share/cmake/${PROJECT_NAME}" CACHE STRING "install path for ${PROJECT_NAME}Config.cmake")
 
 if (NOT CMAKE_VERSION VERSION_LESS 3.0)
   export(EXPORT ${PROJECT_NAME}-targets

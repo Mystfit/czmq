@@ -41,7 +41,7 @@ if (NOT CMAKE_BUILD_TYPE)
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
         message(STATUS "git workspace root [${git_result}]: ${git_root}")
-        if ( "${git_result}" == "0" )
+        if ( ${git_result} EQUAL 0)
             set (CMAKE_BUILD_TYPE Debug)
         else ()
             set (CMAKE_BUILD_TYPE Release)

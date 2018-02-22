@@ -326,7 +326,7 @@ if (CZMQ_BUILD_SHARED)
 
   target_include_directories (czmq PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
   )
 
   list(APPEND TARGET_OUTPUTS czmq)
@@ -350,7 +350,7 @@ if (CZMQ_BUILD_STATIC)
 
   target_include_directories (czmq-static PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
   )
 
   target_compile_definitions(czmq-static
@@ -368,8 +368,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/src/CMakeLists-local.txt) # Optional project
 ########################################################################
 set (VERSION "4.1.0")
 set (prefix "${CMAKE_INSTALL_PREFIX}")
-set (exec_prefix "\${prefix}")
-set (libdir "\${prefix}/lib${LIB_SUFFIX}")
+set (exec_prefix "\${prefix}"
+)set (libdir "\${prefix}/lib${LIB_SUFFIX}")
 set (includedir "\${prefix}/include")
 IF (ENABLE_DRAFTS)
     set (pkg_config_defines "-DCZMQ_BUILD_DRAFT_API=1")

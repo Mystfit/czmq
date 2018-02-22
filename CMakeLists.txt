@@ -119,13 +119,13 @@ set(OPTIONAL_LIBRARIES)
 ########################################################################
 # LIBZMQ dependency
 ########################################################################
-hunter_add_package(zeromq)
+hunter_add_package(ZeroMQ)
 set(ZEROMQ_PREFIX "")
 if(HUNTER_ENABLED)
   set(ZEROMQ_PREFIX "ZeroMQ::")
-  find_package(zeromq CONFIG REQUIRED)
+  find_package(ZeroMQ CONFIG REQUIRED)
 else()
-  find_package(zeromq REQUIRED)
+  find_package(ZeroMQ REQUIRED)
 endif()
 
 if(BUILD_SHARED_LIBS)

@@ -119,10 +119,9 @@ set(OPTIONAL_LIBRARIES)
 ########################################################################
 # LIBZMQ dependency
 ########################################################################
+set(ZEROMQ_PREFIX "ZeroMQ::")
 hunter_add_package(ZeroMQ)
-set(ZEROMQ_PREFIX "")
 if(HUNTER_ENABLED)
-  set(ZEROMQ_PREFIX "ZeroMQ::")
   find_package(ZeroMQ CONFIG REQUIRED)
 else()
   find_package(ZeroMQ REQUIRED)
@@ -133,6 +132,12 @@ if(BUILD_SHARED_LIBS)
 else()
   set(LIBZMQ_HUNTER_TARGET "${ZEROMQ_PREFIX}libzmq-static")
 endif()
+
+IF (TARGET ${LIBZMQ_HUNTER_TARGET})
+    set(pkg_config_libs_private "${pkg_config_libs_private} -lzmq")
+ELSE ()
+    message( FATAL_ERROR "ZeroMQ not found." )
+ENDIF ()
 
 ########################################################################
 # UUID dependency
@@ -425,27 +430,27 @@ if (MSVC)
           LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
           PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
           COMPONENT SDK)
-  # if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  #   install (TARGETS ${TARGET_OUTPUTS}
-  #           RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  #           ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-  #           PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  #           COMPONENT SDK
-  #   )
-  # elseif (BUILD_SHARED)
-  #   install (TARGETS czmq
-  #           RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  #           COMPONENT Runtime
-  #           PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  #   )
-  # endif ()
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    install (TARGETS ${TARGET_OUTPUTS}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            COMPONENT SDK
+    )
+  elseif (BUILD_SHARED)
+    install (TARGETS czmq
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            COMPONENT Runtime
+            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+  endif ()
 else ()
   install (TARGETS ${TARGET_OUTPUTS}
           EXPORT ${PROJECT_NAME}-targets
           PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDE_DIR}
           RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
           FRAMEWORK DESTINATION "Library/Frameworks"
   )
 endif ()

@@ -347,6 +347,10 @@ if (CZMQ_BUILD_SHARED)
     $<INSTALL_INTERFACE:include>
   )
 
+  if(ENABLE_DRAFTS)
+    target_compile_definitions(czmq PUBLIC CZMQ_BUILD_DRAFT_API)
+  )
+
   list(APPEND TARGET_OUTPUTS czmq)
 endif()
 
@@ -377,6 +381,10 @@ if (CZMQ_BUILD_STATIC)
 
   target_compile_definitions(czmq-static
     PUBLIC CZMQ_STATIC
+  )
+
+  if(ENABLE_DRAFTS)
+      target_compile_definitions(czmq-static PUBLIC CZMQ_BUILD_DRAFT_API)
   )
 
   list(APPEND TARGET_OUTPUTS czmq-static)

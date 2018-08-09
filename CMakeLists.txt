@@ -315,6 +315,11 @@ IF (NOT MSVC)
   set_property(TARGET czmq_objects PROPERTY POSITION_INDEPENDENT_CODE ON)
 ENDIF (NOT MSVC)
 
+set(target_defines "")
+if(ENABLE_DRAFTS)
+  list(APPEND target_defines CZMQ_BUILD_DRAFT_API)
+endif(ENABLE_DRAFTS)
+
 # shared
 if (CZMQ_BUILD_SHARED)
   IF (MSVC)
@@ -350,11 +355,9 @@ if (CZMQ_BUILD_SHARED)
       $<INSTALL_INTERFACE:include>
   )
 
-  if(ENABLE_DRAFTS)
-    target_compile_definitions(czmq
-      PUBLIC CZMQ_BUILD_DRAFT_API
-    )
-  endif(ENABLE_DRAFTS)
+  target_compile_definitions(czmq
+    PUBLIC ${target_defines}
+  )
 endif()
 
 # static
@@ -389,14 +392,8 @@ if (CZMQ_BUILD_STATIC)
       $<INSTALL_INTERFACE:include>
   )
   target_compile_definitions(czmq-static
-    PUBLIC CZMQ_STATIC
+    PUBLIC CZMQ_STATIC ${target_defines}
   )
-  if(ENABLE_DRAFTS)
-    target_compile_definitions(czmq-static
-      PUBLIC CZMQ_BUILD_DRAFT_API
-    )
-  endif(ENABLE_DRAFTS)
-
 endif()
 
 

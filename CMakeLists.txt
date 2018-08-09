@@ -116,7 +116,19 @@ set(OPTIONAL_LIBRARIES)
 ########################################################################
 # LIBZMQ dependency
 ########################################################################
-find_package(libzmq REQUIRED)
+option(LIBZMQ_FIND_USING_CMAKE_PACKAGE "Find libZMQ using a CMake package config file" CACHED OFF)
+if(LIBZMQ_FIND_USING_CMAKE_PACKAGE)
+  find_package(ZeroMQ CONFIG REQUIRED)
+  if(ZeroMQ_FOUND)
+    set(LIBZMQ_FOUND TRUE)
+    set(LIBZMQ_INCLUDE_DIRS ${ZeroMQ_INCLUDE_DIR})
+    set(LIBZMQ_INCLUDE_DIRS ${ZeroMQ_INCLUDE_DIR})
+    set(LIBZMQ_LIBRARIES ${ZeroMQ_LIBRARY} ${ZeroMQ_STATIC_LIBRARY})
+  endif(ZeroMQ_FOUND)
+else(LIBZMQ_FIND_USING_CMAKE_PACKAGE)
+  find_package(libzmq REQUIRED)
+endif(LIBZMQ_FIND_USING_CMAKE_PACKAGE)
+
 IF (LIBZMQ_FOUND)
     include_directories(${LIBZMQ_INCLUDE_DIRS})
     list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
@@ -337,6 +349,12 @@ if (CZMQ_BUILD_SHARED)
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
       $<INSTALL_INTERFACE:include>
   )
+
+  if(ENABLE_DRAFTS)
+    target_compile_definitions(czmq
+      PUBLIC CZMQ_BUILD_DRAFT_API
+    )
+  endif(ENABLE_DRAFTS)
 endif()
 
 # static
@@ -373,6 +391,11 @@ if (CZMQ_BUILD_STATIC)
   target_compile_definitions(czmq-static
     PUBLIC CZMQ_STATIC
   )
+  if(ENABLE_DRAFTS)
+    target_compile_definitions(czmq-static
+      PUBLIC CZMQ_BUILD_DRAFT_API
+    )
+  endif(ENABLE_DRAFTS)
 
 endif()
 

@@ -116,7 +116,7 @@ set(OPTIONAL_LIBRARIES)
 ########################################################################
 # LIBZMQ dependency
 ########################################################################
-option(LIBZMQ_FIND_USING_CMAKE_PACKAGE "Find libZMQ using a CMake package config file" CACHED OFF)
+option(LIBZMQ_FIND_USING_CMAKE_PACKAGE "Find libZMQ using a CMake package config file" OFF)
 if(LIBZMQ_FIND_USING_CMAKE_PACKAGE)
   find_package(ZeroMQ CONFIG REQUIRED)
   if(ZeroMQ_FOUND)

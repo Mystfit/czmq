@@ -355,7 +355,7 @@ ENDIF (NOT MSVC)
 
 set(target_defines "")
 if(ENABLE_DRAFTS)
-  list(APPEND target_defines CZMQ_BUILD_DRAFT_API)
+  list(APPEND target_defines CZMQ_BUILD_DRAFT_API ZMQ_BUILD_DRAFT_API)
 endif(ENABLE_DRAFTS)
 
 # shared

@@ -118,10 +118,19 @@ set(OPTIONAL_LIBRARIES_STATIC)
 ########################################################################
 # LIBZMQ dependency
 ########################################################################
-find_package(libzmq REQUIRED)
+option(LIBZMQ_FIND_USING_CMAKE_PACKAGE "Find libZMQ using a CMake package config file" OFF)
+if(LIBZMQ_FIND_USING_CMAKE_PACKAGE)
+  find_package(ZeroMQ CONFIG REQUIRED)
+  if(ZeroMQ_FOUND)
+    set(LIBZMQ_FOUND TRUE)
+    set(LIBZMQ_INCLUDE_DIRS ${ZeroMQ_INCLUDE_DIR})
+  endif(ZeroMQ_FOUND)
+else(LIBZMQ_FIND_USING_CMAKE_PACKAGE)
+  find_package(libzmq REQUIRED)
+endif(LIBZMQ_FIND_USING_CMAKE_PACKAGE)
+
 IF (LIBZMQ_FOUND)
     include_directories(${LIBZMQ_INCLUDE_DIRS})
-    list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
   IF (PC_LIBZMQ_FOUND)
       set(pkg_config_names_private "${pkg_config_names_private} libzmq")
       list(APPEND OPTIONAL_LIBRARIES_STATIC ${PC_LIBZMQ_STATIC_LDFLAGS})
@@ -363,7 +372,7 @@ if (CZMQ_BUILD_SHARED)
   )
 
   target_link_libraries(czmq
-    PUBLIC ${MORE_LIBRARIES}
+    PUBLIC ${MORE_LIBRARIES} libzmq
   )
 
   install(TARGETS czmq
@@ -396,7 +405,7 @@ if (CZMQ_BUILD_STATIC)
   )
 
   target_link_libraries(czmq-static
-    PUBLIC ${MORE_LIBRARIES}
+    PUBLIC ${MORE_LIBRARIES} libzmq-static
   )
 
   install(TARGETS czmq-static
@@ -482,7 +491,7 @@ if (TARGET czmq)
 target_link_libraries(
     zmakecert
     czmq
-    ${LIBZMQ_LIBRARIES}
+    libzmq
     ${OPTIONAL_LIBRARIES}
 )
 endif()
@@ -490,7 +499,7 @@ if (NOT TARGET czmq AND TARGET czmq-static)
 target_link_libraries(
     zmakecert
     czmq-static
-    ${LIBZMQ_LIBRARIES}
+    libzmq-static
     ${OPTIONAL_LIBRARIES}
     ${OPTIONAL_LIBRARIES_STATIC}
 )
@@ -506,7 +515,7 @@ if (TARGET czmq)
 target_link_libraries(
     zsp
     czmq
-    ${LIBZMQ_LIBRARIES}
+    libzmq
     ${OPTIONAL_LIBRARIES}
 )
 endif()
@@ -514,7 +523,7 @@ if (NOT TARGET czmq AND TARGET czmq-static)
 target_link_libraries(
     zsp
     czmq-static
-    ${LIBZMQ_LIBRARIES}
+    libzmq-static
     ${OPTIONAL_LIBRARIES}
     ${OPTIONAL_LIBRARIES_STATIC}
 )
@@ -527,7 +536,7 @@ if (TARGET czmq)
 target_link_libraries(
     test_randof
     czmq
-    ${LIBZMQ_LIBRARIES}
+    libzmq
     ${OPTIONAL_LIBRARIES}
 )
 endif()
@@ -535,7 +544,7 @@ if (NOT TARGET czmq AND TARGET czmq-static)
 target_link_libraries(
     test_randof
     czmq-static
-    ${LIBZMQ_LIBRARIES}
+    libzmq-static
     ${OPTIONAL_LIBRARIES}
     ${OPTIONAL_LIBRARIES_STATIC}
 )
@@ -548,7 +557,7 @@ if (TARGET czmq)
 target_link_libraries(
     czmq_selftest
     czmq
-    ${LIBZMQ_LIBRARIES}
+    libzmq
     ${OPTIONAL_LIBRARIES}
 )
 endif()
@@ -556,7 +565,7 @@ if (NOT TARGET czmq AND TARGET czmq-static)
 target_link_libraries(
     czmq_selftest
     czmq-static
-    ${LIBZMQ_LIBRARIES}
+    libzmq-static
     ${OPTIONAL_LIBRARIES}
     ${OPTIONAL_LIBRARIES_STATIC}
 )

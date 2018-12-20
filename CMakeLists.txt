@@ -353,10 +353,21 @@ IF (NOT MSVC)
   set_property(TARGET czmq_objects PROPERTY POSITION_INDEPENDENT_CODE ON)
 ENDIF (NOT MSVC)
 
+set(target_defines "")
+if(ENABLE_DRAFTS)
+  list(APPEND target_defines CZMQ_BUILD_DRAFT_API)
+endif(ENABLE_DRAFTS)
+
 # shared
 if (CZMQ_BUILD_SHARED)
   IF (MSVC)
     add_library(czmq SHARED ${czmq_sources})
+    set_target_properties (czmq PROPERTIES
+      RELEASE_POSTFIX "${MSVC_TOOLSET}-mt-${CZMQ_VERSION_MAJOR}_${CZMQ_VERSION_MINOR}_${CZMQ_VERSION_PATCH}"
+      RELWITHDEBINFO_POSTFIX "${MSVC_TOOLSET}-mt-${CZMQ_VERSION_MAJOR}_${CZMQ_VERSION_MINOR}_${CZMQ_VERSION_PATCH}"
+      MINSIZEREL_POSTFIX "${MSVC_TOOLSET}-mt-${CZMQ_VERSION_MAJOR}_${CZMQ_VERSION_MINOR}_${CZMQ_VERSION_PATCH}"
+      DEBUG_POSTFIX "${MSVC_TOOLSET}-mt-gd-${CZMQ_VERSION_MAJOR}_${CZMQ_VERSION_MINOR}_${CZMQ_VERSION_PATCH}"
+    )
   ELSE (MSVC)
     add_library(czmq SHARED $<TARGET_OBJECTS:czmq_objects>)
   ENDIF (MSVC)
@@ -387,12 +398,22 @@ if (CZMQ_BUILD_SHARED)
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
       $<INSTALL_INTERFACE:include>
   )
+
+  target_compile_definitions(czmq
+    PUBLIC ${target_defines}
+  )
 endif()
 
 # static
 if (CZMQ_BUILD_STATIC)
   IF (MSVC)
     add_library(czmq-static STATIC ${czmq_sources})
+    set_target_properties(czmq-static PROPERTIES
+      RELEASE_POSTFIX "${MSVC_TOOLSET}-mt-s-${CZMQ_VERSION_MAJOR}_${CZMQ_VERSION_MINOR}_${CZMQ_VERSION_PATCH}"
+      RELWITHDEBINFO_POSTFIX "${MSVC_TOOLSET}-mt-s-${CZMQ_VERSION_MAJOR}_${CZMQ_VERSION_MINOR}_${CZMQ_VERSION_PATCH}"
+      MINSIZEREL_POSTFIX "${MSVC_TOOLSET}-mt-s-${CZMQ_VERSION_MAJOR}_${CZMQ_VERSION_MINOR}_${CZMQ_VERSION_PATCH}"
+      DEBUG_POSTFIX "${MSVC_TOOLSET}-mt-sgd-${CZMQ_VERSION_MAJOR}_${CZMQ_VERSION_MINOR}_${CZMQ_VERSION_PATCH}"
+    )
   ELSE (MSVC)
     add_library(czmq-static STATIC $<TARGET_OBJECTS:czmq_objects>)
   ENDIF (MSVC)
@@ -421,9 +442,8 @@ if (CZMQ_BUILD_STATIC)
       $<INSTALL_INTERFACE:include>
   )
   target_compile_definitions(czmq-static
-    PUBLIC CZMQ_STATIC
+    PUBLIC CZMQ_STATIC ${target_defines}
   )
-
 endif()
 
 

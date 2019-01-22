@@ -131,7 +131,6 @@ endif(LIBZMQ_FIND_USING_CMAKE_PACKAGE)
 
 IF (LIBZMQ_FOUND)
     include_directories(${LIBZMQ_INCLUDE_DIRS})
-    list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
   IF (PC_LIBZMQ_FOUND)
       set(pkg_config_names_private "${pkg_config_names_private} libzmq")
       list(APPEND OPTIONAL_LIBRARIES_STATIC ${PC_LIBZMQ_STATIC_LDFLAGS})
@@ -356,7 +355,7 @@ ENDIF (NOT MSVC)
 
 set(target_defines "")
 if(ENABLE_DRAFTS)
-  list(APPEND target_defines CZMQ_BUILD_DRAFT_API)
+  list(APPEND target_defines CZMQ_BUILD_DRAFT_API ZMQ_BUILD_DRAFT_API)
 endif(ENABLE_DRAFTS)
 
 # shared
@@ -383,9 +382,8 @@ if (CZMQ_BUILD_SHARED)
     PREFIX "lib"
   )
 
-  target_link_libraries(czmq PUBLIC
-    ${MORE_LIBRARIES}
-    libzmq
+  target_link_libraries(czmq
+    PUBLIC ${MORE_LIBRARIES} libzmq
   )
 
   install(TARGETS czmq
@@ -427,9 +425,8 @@ if (CZMQ_BUILD_STATIC)
     PREFIX "lib"
   )
 
-  target_link_libraries(czmq-static PUBLIC
-    ${MORE_LIBRARIES}
-    libzmq-static
+  target_link_libraries(czmq-static
+    PUBLIC ${MORE_LIBRARIES} libzmq-static
   )
 
   install(TARGETS czmq-static

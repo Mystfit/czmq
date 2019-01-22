@@ -347,6 +347,46 @@ void QZsys::setThreadPriority (int priority)
 }
 
 ///
+//  Configure the numeric prefix to each thread created for the internal
+//  context's thread pool. This option is only supported on Linux.
+//  If the environment variable ZSYS_THREAD_NAME_PREFIX is defined, that
+//  provides the default.
+//  Note that this method is valid only before any socket is created.
+void QZsys::setThreadNamePrefix (int prefix)
+{
+    zsys_set_thread_name_prefix (prefix);
+
+}
+
+///
+//  Return thread name prefix.
+int QZsys::threadNamePrefix ()
+{
+    int rv = zsys_thread_name_prefix ();
+    return rv;
+}
+
+///
+//  Adds a specific CPU to the affinity list of the ZMQ context thread pool.
+//  This option is only supported on Linux.
+//  Note that this method is valid only before any socket is created.
+void QZsys::threadAffinityCpuAdd (int cpu)
+{
+    zsys_thread_affinity_cpu_add (cpu);
+
+}
+
+///
+//  Removes a specific CPU to the affinity list of the ZMQ context thread pool.
+//  This option is only supported on Linux.
+//  Note that this method is valid only before any socket is created.
+void QZsys::threadAffinityCpuRemove (int cpu)
+{
+    zsys_thread_affinity_cpu_remove (cpu);
+
+}
+
+///
 //  Configure the number of sockets that ZeroMQ will allow. The default
 //  is 1024. The actual limit depends on the system, and you can query it
 //  by using zsys_socket_limit (). A value of zero means "maximum".
@@ -577,6 +617,62 @@ void QZsys::setAutoUseFd (int autoUseFd)
 int QZsys::autoUseFd ()
 {
     int rv = zsys_auto_use_fd ();
+    return rv;
+}
+
+///
+//  Print formatted string. Format is specified by variable names
+//  in Python-like format style
+//
+//  "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+//  become
+//  "key=value"
+//
+//  Returns freshly allocated string or NULL in a case of error.
+//  Not enough memory, invalid format specifier, name not in args
+QString QZsys::zprintf (const QString &format, QZhash *args)
+{
+    char *retStr_ = zsys_zprintf (format.toUtf8().data(), args->self);
+    QString rv = QString (retStr_);
+    zstr_free (&retStr_);
+    return rv;
+}
+
+///
+//  Return error string for given format/args combination.
+QString QZsys::zprintfError (const QString &format, QZhash *args)
+{
+    char *retStr_ = zsys_zprintf_error (format.toUtf8().data(), args->self);
+    QString rv = QString (retStr_);
+    zstr_free (&retStr_);
+    return rv;
+}
+
+///
+//  Print formatted string. Format is specified by variable names
+//  in Python-like format style
+//
+//  "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+//  become
+//  "key=value"
+//
+//  Returns freshly allocated string or NULL in a case of error.
+//  Not enough memory, invalid format specifier, name not in args
+QString QZsys::zplprintf (const QString &format, QZconfig *args)
+{
+    char *retStr_ = zsys_zplprintf (format.toUtf8().data(), args->self);
+    QString rv = QString (retStr_);
+    zstr_free (&retStr_);
+    return rv;
+}
+
+///
+//  Return error string for given format/args combination.
+QString QZsys::zplprintfError (const QString &format, QZconfig *args)
+{
+    char *retStr_ = zsys_zplprintf_error (format.toUtf8().data(), args->self);
+    QString rv = QString (retStr_);
+    zstr_free (&retStr_);
     return rv;
 }
 

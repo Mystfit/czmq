@@ -574,6 +574,13 @@ zframe my_zchunk.pack ()
 Transform zchunk into a zframe that can be sent in a message.
 
 ```
+zframe my_zchunk.packx (Zchunk)
+```
+
+Transform zchunk into a zframe that can be sent in a message.
+Take ownership of the chunk.
+
+```
 zchunk my_zchunk.unpack (Zframe)
 ```
 
@@ -1809,6 +1816,23 @@ for the list, otherwise not. Copying a null reference returns a null
 reference.
 
 ```
+zframe my_zlistx.pack ()
+```
+
+Serialize list to a binary frame that can be sent in a message.
+The packed format is compatible with the 'strings' type implemented by zproto:
+
+   ; A list of strings
+   list            = list-count *longstr
+   list-count      = number-4
+
+   ; Strings are always length + text contents
+   longstr         = number-4 *VCHAR
+
+   ; Numbers are unsigned integers in network byte order
+   number-4        = 4OCTET
+
+```
 nothing my_zlistx.test (Boolean)
 ```
 
@@ -2381,6 +2405,7 @@ of these characters, each corresponding to one or two arguments:
     c = zchunk_t *
     f = zframe_t *
     h = zhashx_t *
+    l = zlistx_t * (DRAFT)
     U = zuuid_t *
     p = void * (sends the pointer value, only meaningful over inproc)
     m = zmsg_t * (sends all frames in the zmsg)
@@ -2410,6 +2435,7 @@ a series of pointers as provided by the caller:
     f = zframe_t ** (creates zframe)
     U = zuuid_t * (creates a zuuid with the data)
     h = zhashx_t ** (creates zhashx)
+    l = zlistx_t ** (creates zlistx) (DRAFT)
     p = void ** (stores pointer)
     m = zmsg_t ** (creates a zmsg with the remaining frames)
     z = null, asserts empty frame (0 arguments)
@@ -2524,6 +2550,82 @@ integer my_zsock.leave (String)
 
 Leave a group for the RADIO-DISH pattern. Call only on ZMQ_DISH.
 Returns 0 if OK, -1 if failed.
+
+```
+boolean my_zsock.hasIn ()
+```
+
+Check whether the socket has available message to read.
+
+```
+integer my_zsock.routerNotify ()
+```
+
+Get socket option `router_notify`.
+Available from libzmq 4.3.0.
+
+```
+nothing my_zsock.setRouterNotify (Number)
+```
+
+Set socket option `router_notify`.
+Available from libzmq 4.3.0.
+
+```
+integer my_zsock.multicastLoop ()
+```
+
+Get socket option `multicast_loop`.
+Available from libzmq 4.3.0.
+
+```
+nothing my_zsock.setMulticastLoop (Number)
+```
+
+Set socket option `multicast_loop`.
+Available from libzmq 4.3.0.
+
+```
+string my_zsock.metadata ()
+```
+
+Get socket option `metadata`.
+Available from libzmq 4.3.0.
+
+```
+nothing my_zsock.setMetadata (String)
+```
+
+Set socket option `metadata`.
+Available from libzmq 4.3.0.
+
+```
+integer my_zsock.loopbackFastpath ()
+```
+
+Get socket option `loopback_fastpath`.
+Available from libzmq 4.3.0.
+
+```
+nothing my_zsock.setLoopbackFastpath (Number)
+```
+
+Set socket option `loopback_fastpath`.
+Available from libzmq 4.3.0.
+
+```
+integer my_zsock.zapEnforceDomain ()
+```
+
+Get socket option `zap_enforce_domain`.
+Available from libzmq 4.3.0.
+
+```
+nothing my_zsock.setZapEnforceDomain (Number)
+```
+
+Set socket option `zap_enforce_domain`.
+Available from libzmq 4.3.0.
 
 ```
 integer my_zsock.gssapiPrincipalNametype ()
@@ -3869,6 +3971,38 @@ defined, that provides the default.
 Note that this method is valid only before any socket is created.
 
 ```
+nothing my_zsys.setThreadNamePrefix (Number)
+```
+
+Configure the numeric prefix to each thread created for the internal
+context's thread pool. This option is only supported on Linux.
+If the environment variable ZSYS_THREAD_NAME_PREFIX is defined, that
+provides the default.
+Note that this method is valid only before any socket is created.
+
+```
+integer my_zsys.threadNamePrefix ()
+```
+
+Return thread name prefix.
+
+```
+nothing my_zsys.threadAffinityCpuAdd (Number)
+```
+
+Adds a specific CPU to the affinity list of the ZMQ context thread pool.
+This option is only supported on Linux.
+Note that this method is valid only before any socket is created.
+
+```
+nothing my_zsys.threadAffinityCpuRemove (Number)
+```
+
+Removes a specific CPU to the affinity list of the ZMQ context thread pool.
+This option is only supported on Linux.
+Note that this method is valid only before any socket is created.
+
+```
 nothing my_zsys.setMaxSockets ()
 ```
 
@@ -4055,6 +4189,46 @@ integer my_zsys.autoUseFd ()
 ```
 
 Return use of automatic pre-allocated FDs for zsock instances.
+
+```
+string my_zsys.zprintf (String, Zhash)
+```
+
+Print formatted string. Format is specified by variable names
+in Python-like format style
+
+"%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+become
+"key=value"
+
+Returns freshly allocated string or NULL in a case of error.
+Not enough memory, invalid format specifier, name not in args
+
+```
+string my_zsys.zprintfError (String, Zhash)
+```
+
+Return error string for given format/args combination.
+
+```
+string my_zsys.zplprintf (String, Zconfig)
+```
+
+Print formatted string. Format is specified by variable names
+in Python-like format style
+
+"%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+become
+"key=value"
+
+Returns freshly allocated string or NULL in a case of error.
+Not enough memory, invalid format specifier, name not in args
+
+```
+string my_zsys.zplprintfError (String, Zconfig)
+```
+
+Return error string for given format/args combination.
 
 ```
 nothing my_zsys.setLogident (String)
@@ -4325,6 +4499,48 @@ returns null.
 
 ```
 nothing my_zuuid.test (Boolean)
+```
+
+Self test of this class.
+
+### The ZhttpClient class - Provides an http client, allowing multiple requests simultaneously and integrate easily with zpoller.
+
+Constructor:
+
+```
+var czmq = require ('bindings')('czmq')
+var my_zhttp_client = new czmq.ZhttpClient (Boolean)
+```
+
+You *must* call the destructor on every ZhttpClient instance:
+
+```
+my_zhttp_client.destroy ()
+```
+
+Methods:
+
+```
+integer my_zhttp_client.execute ()
+```
+
+Invoke callback function for received responses.
+Should be call after zpoller wait method.
+Returns 0 if OK, -1 on failure.
+
+```
+integer my_zhttp_client.wait (Number)
+```
+
+Wait until a response is ready to be consumed.
+Use when you need a synchronize response.
+
+The timeout should be zero or greater, or -1 to wait indefinitely.
+
+Returns 0 if a response is ready, -1 and otherwise. errno will be set to EAGAIN if no response is ready.
+
+```
+nothing my_zhttp_client.test (Boolean)
 ```
 
 Self test of this class.

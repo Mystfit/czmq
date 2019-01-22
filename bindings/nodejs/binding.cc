@@ -906,6 +906,7 @@ NAN_MODULE_INIT (Zchunk::Init) {
     Nan::SetPrototypeMethod (tpl, "strdup", _strdup);
     Nan::SetPrototypeMethod (tpl, "streq", _streq);
     Nan::SetPrototypeMethod (tpl, "pack", _pack);
+    Nan::SetPrototypeMethod (tpl, "packx", _packx);
     Nan::SetPrototypeMethod (tpl, "unpack", _unpack);
     Nan::SetPrototypeMethod (tpl, "digest", _digest);
     Nan::SetPrototypeMethod (tpl, "print", _print);
@@ -1097,6 +1098,18 @@ NAN_METHOD (Zchunk::_streq) {
 NAN_METHOD (Zchunk::_pack) {
     Zchunk *zchunk = Nan::ObjectWrap::Unwrap <Zchunk> (info.Holder ());
     zframe_t *result = zchunk_pack (zchunk->self);
+    Zframe *zframe_result = new Zframe (result);
+    if (zframe_result) {
+    //  Don't yet know how to return a new object
+    //      zframe->Wrap (info.This ());
+    //      info.GetReturnValue ().Set (info.This ());
+        info.GetReturnValue ().Set (Nan::New<Boolean>(true));
+    }
+}
+
+NAN_METHOD (Zchunk::_packx) {
+    Zchunk *self_p = Nan::ObjectWrap::Unwrap<Zchunk>(info [0].As<Object>());
+    zframe_t *result = zchunk_packx (&self_p->self);
     Zframe *zframe_result = new Zframe (result);
     if (zframe_result) {
     //  Don't yet know how to return a new object
@@ -3478,6 +3491,7 @@ NAN_MODULE_INIT (Zlistx::Init) {
     Nan::SetPrototypeMethod (tpl, "purge", _purge);
     Nan::SetPrototypeMethod (tpl, "sort", _sort);
     Nan::SetPrototypeMethod (tpl, "dup", _dup);
+    Nan::SetPrototypeMethod (tpl, "pack", _pack);
     Nan::SetPrototypeMethod (tpl, "test", _test);
 
     constructor ().Reset (Nan::GetFunction (tpl).ToLocalChecked ());
@@ -3539,6 +3553,18 @@ NAN_METHOD (Zlistx::_dup) {
     if (zlistx_result) {
     //  Don't yet know how to return a new object
     //      zlistx->Wrap (info.This ());
+    //      info.GetReturnValue ().Set (info.This ());
+        info.GetReturnValue ().Set (Nan::New<Boolean>(true));
+    }
+}
+
+NAN_METHOD (Zlistx::_pack) {
+    Zlistx *zlistx = Nan::ObjectWrap::Unwrap <Zlistx> (info.Holder ());
+    zframe_t *result = zlistx_pack (zlistx->self);
+    Zframe *zframe_result = new Zframe (result);
+    if (zframe_result) {
+    //  Don't yet know how to return a new object
+    //      zframe->Wrap (info.This ());
     //      info.GetReturnValue ().Set (info.This ());
         info.GetReturnValue ().Set (Nan::New<Boolean>(true));
     }
@@ -4475,6 +4501,17 @@ NAN_MODULE_INIT (Zsock::Init) {
     Nan::SetPrototypeMethod (tpl, "flush", _flush);
     Nan::SetPrototypeMethod (tpl, "join", _join);
     Nan::SetPrototypeMethod (tpl, "leave", _leave);
+    Nan::SetPrototypeMethod (tpl, "hasIn", _has_in);
+    Nan::SetPrototypeMethod (tpl, "routerNotify", _router_notify);
+    Nan::SetPrototypeMethod (tpl, "setRouterNotify", _set_router_notify);
+    Nan::SetPrototypeMethod (tpl, "multicastLoop", _multicast_loop);
+    Nan::SetPrototypeMethod (tpl, "setMulticastLoop", _set_multicast_loop);
+    Nan::SetPrototypeMethod (tpl, "metadata", _metadata);
+    Nan::SetPrototypeMethod (tpl, "setMetadata", _set_metadata);
+    Nan::SetPrototypeMethod (tpl, "loopbackFastpath", _loopback_fastpath);
+    Nan::SetPrototypeMethod (tpl, "setLoopbackFastpath", _set_loopback_fastpath);
+    Nan::SetPrototypeMethod (tpl, "zapEnforceDomain", _zap_enforce_domain);
+    Nan::SetPrototypeMethod (tpl, "setZapEnforceDomain", _set_zap_enforce_domain);
     Nan::SetPrototypeMethod (tpl, "gssapiPrincipalNametype", _gssapi_principal_nametype);
     Nan::SetPrototypeMethod (tpl, "setGssapiPrincipalNametype", _set_gssapi_principal_nametype);
     Nan::SetPrototypeMethod (tpl, "gssapiServicePrincipalNametype", _gssapi_service_principal_nametype);
@@ -4971,6 +5008,129 @@ NAN_METHOD (Zsock::_leave) {
          //} //bjornw end
     int result = zsock_leave (zsock->self, (const char *)group);
     info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (Zsock::_has_in) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    bool result = zsock_has_in (zsock->self);
+    info.GetReturnValue ().Set (Nan::New<Boolean>(result));
+}
+
+NAN_METHOD (Zsock::_router_notify) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    int result = zsock_router_notify (zsock->self);
+    info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (Zsock::_set_router_notify) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `router notify`");
+
+    //int router_notify; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    int router_notify;
+
+
+    if (info [0]->IsNumber ())
+    {
+          router_notify = Nan::To<int>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`router notify` must be a number");
+    zsock_set_router_notify (zsock->self, (int) router_notify);
+}
+
+NAN_METHOD (Zsock::_multicast_loop) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    int result = zsock_multicast_loop (zsock->self);
+    info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (Zsock::_set_multicast_loop) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `multicast loop`");
+
+    //int multicast_loop; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    int multicast_loop;
+
+
+    if (info [0]->IsNumber ())
+    {
+          multicast_loop = Nan::To<int>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`multicast loop` must be a number");
+    zsock_set_multicast_loop (zsock->self, (int) multicast_loop);
+}
+
+NAN_METHOD (Zsock::_metadata) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    char *result = (char *) zsock_metadata (zsock->self);
+    info.GetReturnValue ().Set (Nan::New (result).ToLocalChecked ());
+}
+
+NAN_METHOD (Zsock::_set_metadata) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    char *metadata;
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `metadata`");
+    else
+    if (!info [0]->IsString ())
+        return Nan::ThrowTypeError ("`metadata` must be a string");
+    //else { // bjornw: remove brackets to keep scope
+    Nan::Utf8String metadata_utf8 (info [0].As<String>());
+    metadata = *metadata_utf8;
+         //} //bjornw end
+    zsock_set_metadata (zsock->self, (const char *)metadata);
+}
+
+NAN_METHOD (Zsock::_loopback_fastpath) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    int result = zsock_loopback_fastpath (zsock->self);
+    info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (Zsock::_set_loopback_fastpath) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `loopback fastpath`");
+
+    //int loopback_fastpath; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    int loopback_fastpath;
+
+
+    if (info [0]->IsNumber ())
+    {
+          loopback_fastpath = Nan::To<int>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`loopback fastpath` must be a number");
+    zsock_set_loopback_fastpath (zsock->self, (int) loopback_fastpath);
+}
+
+NAN_METHOD (Zsock::_zap_enforce_domain) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    int result = zsock_zap_enforce_domain (zsock->self);
+    info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (Zsock::_set_zap_enforce_domain) {
+    Zsock *zsock = Nan::ObjectWrap::Unwrap <Zsock> (info.Holder ());
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `zap enforce domain`");
+
+    //int zap_enforce_domain; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    int zap_enforce_domain;
+
+
+    if (info [0]->IsNumber ())
+    {
+          zap_enforce_domain = Nan::To<int>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`zap enforce domain` must be a number");
+    zsock_set_zap_enforce_domain (zsock->self, (int) zap_enforce_domain);
 }
 
 NAN_METHOD (Zsock::_gssapi_principal_nametype) {
@@ -6980,6 +7140,10 @@ NAN_MODULE_INIT (Zsys::Init) {
     Nan::SetPrototypeMethod (tpl, "setIoThreads", _set_io_threads);
     Nan::SetPrototypeMethod (tpl, "setThreadSchedPolicy", _set_thread_sched_policy);
     Nan::SetPrototypeMethod (tpl, "setThreadPriority", _set_thread_priority);
+    Nan::SetPrototypeMethod (tpl, "setThreadNamePrefix", _set_thread_name_prefix);
+    Nan::SetPrototypeMethod (tpl, "threadNamePrefix", _thread_name_prefix);
+    Nan::SetPrototypeMethod (tpl, "threadAffinityCpuAdd", _thread_affinity_cpu_add);
+    Nan::SetPrototypeMethod (tpl, "threadAffinityCpuRemove", _thread_affinity_cpu_remove);
     Nan::SetPrototypeMethod (tpl, "setMaxSockets", _set_max_sockets);
     Nan::SetPrototypeMethod (tpl, "socketLimit", _socket_limit);
     Nan::SetPrototypeMethod (tpl, "setMaxMsgsz", _set_max_msgsz);
@@ -7003,6 +7167,10 @@ NAN_MODULE_INIT (Zsys::Init) {
     Nan::SetPrototypeMethod (tpl, "ipv6McastAddress", _ipv6_mcast_address);
     Nan::SetPrototypeMethod (tpl, "setAutoUseFd", _set_auto_use_fd);
     Nan::SetPrototypeMethod (tpl, "autoUseFd", _auto_use_fd);
+    Nan::SetPrototypeMethod (tpl, "zprintf", _zprintf);
+    Nan::SetPrototypeMethod (tpl, "zprintfError", _zprintf_error);
+    Nan::SetPrototypeMethod (tpl, "zplprintf", _zplprintf);
+    Nan::SetPrototypeMethod (tpl, "zplprintfError", _zplprintf_error);
     Nan::SetPrototypeMethod (tpl, "setLogident", _set_logident);
     Nan::SetPrototypeMethod (tpl, "setLogsender", _set_logsender);
     Nan::SetPrototypeMethod (tpl, "setLogsystem", _set_logsystem);
@@ -7388,6 +7556,62 @@ NAN_METHOD (Zsys::_set_thread_priority) {
     zsys_set_thread_priority ((int) priority);
 }
 
+NAN_METHOD (Zsys::_set_thread_name_prefix) {
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `prefix`");
+
+    //int prefix; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    int prefix;
+
+
+    if (info [0]->IsNumber ())
+    {
+          prefix = Nan::To<int>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`prefix` must be a number");
+    zsys_set_thread_name_prefix ((int) prefix);
+}
+
+NAN_METHOD (Zsys::_thread_name_prefix) {
+    int result = zsys_thread_name_prefix ();
+    info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (Zsys::_thread_affinity_cpu_add) {
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `cpu`");
+
+    //int cpu; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    int cpu;
+
+
+    if (info [0]->IsNumber ())
+    {
+          cpu = Nan::To<int>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`cpu` must be a number");
+    zsys_thread_affinity_cpu_add ((int) cpu);
+}
+
+NAN_METHOD (Zsys::_thread_affinity_cpu_remove) {
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `cpu`");
+
+    //int cpu; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    int cpu;
+
+
+    if (info [0]->IsNumber ())
+    {
+          cpu = Nan::To<int>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`cpu` must be a number");
+    zsys_thread_affinity_cpu_remove ((int) cpu);
+}
+
 NAN_METHOD (Zsys::_set_max_sockets) {
     if (info [0]->IsUndefined ())
         return Nan::ThrowTypeError ("method requires a `max sockets`");
@@ -7613,6 +7837,70 @@ NAN_METHOD (Zsys::_set_auto_use_fd) {
 NAN_METHOD (Zsys::_auto_use_fd) {
     int result = zsys_auto_use_fd ();
     info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (Zsys::_zprintf) {
+    char *format;
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `format`");
+    else
+    if (!info [0]->IsString ())
+        return Nan::ThrowTypeError ("`format` must be a string");
+    //else { // bjornw: remove brackets to keep scope
+    Nan::Utf8String format_utf8 (info [0].As<String>());
+    format = *format_utf8;
+         //} //bjornw end
+    Zhash *args = Nan::ObjectWrap::Unwrap<Zhash>(info [1].As<Object>());
+    char *result = (char *) zsys_zprintf ((const char *)format, args->self);
+    info.GetReturnValue ().Set (Nan::New (result).ToLocalChecked ());
+}
+
+NAN_METHOD (Zsys::_zprintf_error) {
+    char *format;
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `format`");
+    else
+    if (!info [0]->IsString ())
+        return Nan::ThrowTypeError ("`format` must be a string");
+    //else { // bjornw: remove brackets to keep scope
+    Nan::Utf8String format_utf8 (info [0].As<String>());
+    format = *format_utf8;
+         //} //bjornw end
+    Zhash *args = Nan::ObjectWrap::Unwrap<Zhash>(info [1].As<Object>());
+    char *result = (char *) zsys_zprintf_error ((const char *)format, args->self);
+    info.GetReturnValue ().Set (Nan::New (result).ToLocalChecked ());
+}
+
+NAN_METHOD (Zsys::_zplprintf) {
+    char *format;
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `format`");
+    else
+    if (!info [0]->IsString ())
+        return Nan::ThrowTypeError ("`format` must be a string");
+    //else { // bjornw: remove brackets to keep scope
+    Nan::Utf8String format_utf8 (info [0].As<String>());
+    format = *format_utf8;
+         //} //bjornw end
+    Zconfig *args = Nan::ObjectWrap::Unwrap<Zconfig>(info [1].As<Object>());
+    char *result = (char *) zsys_zplprintf ((const char *)format, args->self);
+    info.GetReturnValue ().Set (Nan::New (result).ToLocalChecked ());
+}
+
+NAN_METHOD (Zsys::_zplprintf_error) {
+    char *format;
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `format`");
+    else
+    if (!info [0]->IsString ())
+        return Nan::ThrowTypeError ("`format` must be a string");
+    //else { // bjornw: remove brackets to keep scope
+    Nan::Utf8String format_utf8 (info [0].As<String>());
+    format = *format_utf8;
+         //} //bjornw end
+    Zconfig *args = Nan::ObjectWrap::Unwrap<Zconfig>(info [1].As<Object>());
+    char *result = (char *) zsys_zplprintf_error ((const char *)format, args->self);
+    info.GetReturnValue ().Set (Nan::New (result).ToLocalChecked ());
 }
 
 NAN_METHOD (Zsys::_set_logident) {
@@ -8232,6 +8520,118 @@ Nan::Persistent <Function> &Zuuid::constructor () {
 }
 
 
+NAN_MODULE_INIT (ZhttpClient::Init) {
+    Nan::HandleScope scope;
+
+    // Prepare constructor template
+    Local <FunctionTemplate> tpl = Nan::New <FunctionTemplate> (New);
+    tpl->SetClassName (Nan::New ("ZhttpClient").ToLocalChecked ());
+    tpl->InstanceTemplate ()->SetInternalFieldCount (1);
+
+    // Prototypes
+    Nan::SetPrototypeMethod (tpl, "destroy", destroy);
+    Nan::SetPrototypeMethod (tpl, "defined", defined);
+    Nan::SetPrototypeMethod (tpl, "execute", _execute);
+    Nan::SetPrototypeMethod (tpl, "wait", _wait);
+    Nan::SetPrototypeMethod (tpl, "test", _test);
+
+    constructor ().Reset (Nan::GetFunction (tpl).ToLocalChecked ());
+    Nan::Set (target, Nan::New ("ZhttpClient").ToLocalChecked (),
+    Nan::GetFunction (tpl).ToLocalChecked ());
+}
+
+ZhttpClient::ZhttpClient (bool verbose) {
+    self = zhttp_client_new ((bool) verbose);
+}
+
+ZhttpClient::ZhttpClient (zhttp_client_t *self_) {
+    self = self_;
+}
+
+ZhttpClient::~ZhttpClient () {
+}
+
+NAN_METHOD (ZhttpClient::New) {
+    assert (info.IsConstructCall ());
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `verbose`");
+
+    //bool verbose; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    bool verbose;
+
+
+    if (info [0]->IsBoolean ())
+    {
+          verbose = Nan::To<bool>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`verbose` must be a Boolean");
+    ZhttpClient *zhttp_client = new ZhttpClient ((bool) verbose);
+    if (zhttp_client) {
+        zhttp_client->Wrap (info.This ());
+        info.GetReturnValue ().Set (info.This ());
+    }
+}
+
+NAN_METHOD (ZhttpClient::destroy) {
+    ZhttpClient *zhttp_client = Nan::ObjectWrap::Unwrap <ZhttpClient> (info.Holder ());
+    zhttp_client_destroy (&zhttp_client->self);
+}
+
+
+NAN_METHOD (ZhttpClient::defined) {
+    ZhttpClient *zhttp_client = Nan::ObjectWrap::Unwrap <ZhttpClient> (info.Holder ());
+    info.GetReturnValue ().Set (Nan::New (zhttp_client->self != NULL));
+}
+
+NAN_METHOD (ZhttpClient::_execute) {
+    ZhttpClient *zhttp_client = Nan::ObjectWrap::Unwrap <ZhttpClient> (info.Holder ());
+    int result = zhttp_client_execute (zhttp_client->self);
+    info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (ZhttpClient::_wait) {
+    ZhttpClient *zhttp_client = Nan::ObjectWrap::Unwrap <ZhttpClient> (info.Holder ());
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `timeout`");
+
+    //int timeout; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    int timeout;
+
+
+    if (info [0]->IsNumber ())
+    {
+          timeout = Nan::To<int>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`timeout` must be a number");
+    int result = zhttp_client_wait (zhttp_client->self, (int) timeout);
+    info.GetReturnValue ().Set (Nan::New<Number>(result));
+}
+
+NAN_METHOD (ZhttpClient::_test) {
+    if (info [0]->IsUndefined ())
+        return Nan::ThrowTypeError ("method requires a `verbose`");
+
+    //bool verbose; // bjornw typedef - if using c_type, then you get 'int * major' but it needs to be 'int major'. later using the FromJust() returns an int
+    bool verbose;
+
+
+    if (info [0]->IsBoolean ())
+    {
+          verbose = Nan::To<bool>(info [0]).FromJust ();
+    }
+    else
+        return Nan::ThrowTypeError ("`verbose` must be a Boolean");
+    zhttp_client_test ((bool) verbose);
+}
+
+Nan::Persistent <Function> &ZhttpClient::constructor () {
+    static Nan::Persistent <Function> my_constructor;
+    return my_constructor;
+}
+
+
 extern "C" NAN_MODULE_INIT (czmq_initialize)
 {
     Zargs::Init (target);
@@ -8261,6 +8661,7 @@ extern "C" NAN_MODULE_INIT (czmq_initialize)
     Ztimerset::Init (target);
     Ztrie::Init (target);
     Zuuid::Init (target);
+    ZhttpClient::Init (target);
 }
 
 NODE_MODULE (czmq, czmq_initialize)

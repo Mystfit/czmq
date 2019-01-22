@@ -6,13 +6,18 @@
 */
 package org.zeromq.czmq;
 
+import org.scijava.nativelib.NativeLoader;
+
 public class Ziflist implements AutoCloseable{
     static {
-        try {
-            System.loadLibrary ("czmqjni");
-        }
-        catch (Exception e) {
-            System.exit (-1);
+        if (System.getProperty("java.vm.vendor").contains("Android")) {
+            System.loadLibrary("czmqjni");
+        } else {
+            try {
+                NativeLoader.loadLibrary("czmqjni");
+            } catch (Exception e) {
+                System.exit (-1);
+            }
         }
     }
     public long self;
@@ -97,7 +102,7 @@ public class Ziflist implements AutoCloseable{
     Includes IPv6 interfaces
     */
     native static long __newIpv6 ();
-    public Ziflist newIpv6 () {
+    public static Ziflist newIpv6 () {
         return new Ziflist (__newIpv6 ());
     }
     /*

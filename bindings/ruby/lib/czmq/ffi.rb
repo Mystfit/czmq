@@ -140,6 +140,7 @@ module CZMQ
       require_relative 'ffi/zcertstore'
 
       attach_function :zchunk_new, [:pointer, :size_t], :pointer, **opts
+      attach_function :zchunk_frommem, [:pointer, :size_t, :pointer, :pointer], :pointer, **opts
       attach_function :zchunk_destroy, [:pointer], :void, **opts
       attach_function :zchunk_resize, [:pointer, :size_t], :void, **opts
       attach_function :zchunk_size, [:pointer], :size_t, **opts
@@ -159,6 +160,7 @@ module CZMQ
       attach_function :zchunk_strdup, [:pointer], :pointer, **opts
       attach_function :zchunk_streq, [:pointer, :string], :bool, **opts
       attach_function :zchunk_pack, [:pointer], :pointer, **opts
+      attach_function :zchunk_packx, [:pointer], :pointer, **opts
       attach_function :zchunk_unpack, [:pointer], :pointer, **opts
       attach_function :zchunk_digest, [:pointer], :string, **opts
       attach_function :zchunk_fprint, [:pointer, :pointer], :void, **opts
@@ -285,6 +287,7 @@ module CZMQ
       attach_function :zframe_new, [:pointer, :size_t], :pointer, **opts
       attach_function :zframe_new_empty, [], :pointer, **opts
       attach_function :zframe_from, [:string], :pointer, **opts
+      attach_function :zframe_frommem, [:pointer, :size_t, :pointer, :pointer], :pointer, **opts
       attach_function :zframe_recv, [:pointer], :pointer, **opts
       attach_function :zframe_destroy, [:pointer], :void, **opts
       attach_function :zframe_send, [:pointer, :pointer, :int], :int, **opts
@@ -411,6 +414,7 @@ module CZMQ
       require_relative 'ffi/zlist'
 
       attach_function :zlistx_new, [], :pointer, **opts
+      attach_function :zlistx_unpack, [:pointer], :pointer, **opts
       attach_function :zlistx_destroy, [:pointer], :void, **opts
       attach_function :zlistx_add_start, [:pointer, :pointer], :pointer, **opts
       attach_function :zlistx_add_end, [:pointer, :pointer], :pointer, **opts
@@ -438,6 +442,7 @@ module CZMQ
       attach_function :zlistx_set_destructor, [:pointer, :pointer], :void, **opts
       attach_function :zlistx_set_duplicator, [:pointer, :pointer], :void, **opts
       attach_function :zlistx_set_comparator, [:pointer, :pointer], :void, **opts
+      attach_function :zlistx_pack, [:pointer], :pointer, **opts
       attach_function :zlistx_test, [:bool], :void, **opts
 
       require_relative 'ffi/zlistx'
@@ -583,6 +588,17 @@ module CZMQ
       attach_function :zsock_leave, [:pointer, :string], :int, **opts
       attach_function :zsock_is, [:pointer], :bool, **opts
       attach_function :zsock_resolve, [:pointer], :pointer, **opts
+      attach_function :zsock_has_in, [:pointer], :bool, **opts
+      attach_function :zsock_router_notify, [:pointer], :int, **opts
+      attach_function :zsock_set_router_notify, [:pointer, :int], :void, **opts
+      attach_function :zsock_multicast_loop, [:pointer], :int, **opts
+      attach_function :zsock_set_multicast_loop, [:pointer, :int], :void, **opts
+      attach_function :zsock_metadata, [:pointer], :pointer, **opts
+      attach_function :zsock_set_metadata, [:pointer, :string], :void, **opts
+      attach_function :zsock_loopback_fastpath, [:pointer], :int, **opts
+      attach_function :zsock_set_loopback_fastpath, [:pointer, :int], :void, **opts
+      attach_function :zsock_zap_enforce_domain, [:pointer], :int, **opts
+      attach_function :zsock_set_zap_enforce_domain, [:pointer, :int], :void, **opts
       attach_function :zsock_gssapi_principal_nametype, [:pointer], :int, **opts
       attach_function :zsock_set_gssapi_principal_nametype, [:pointer, :int], :void, **opts
       attach_function :zsock_gssapi_service_principal_nametype, [:pointer], :int, **opts
@@ -783,6 +799,10 @@ module CZMQ
       attach_function :zsys_set_io_threads, [:size_t], :void, **opts
       attach_function :zsys_set_thread_sched_policy, [:int], :void, **opts
       attach_function :zsys_set_thread_priority, [:int], :void, **opts
+      attach_function :zsys_set_thread_name_prefix, [:int], :void, **opts
+      attach_function :zsys_thread_name_prefix, [], :int, **opts
+      attach_function :zsys_thread_affinity_cpu_add, [:int], :void, **opts
+      attach_function :zsys_thread_affinity_cpu_remove, [:int], :void, **opts
       attach_function :zsys_set_max_sockets, [:size_t], :void, **opts
       attach_function :zsys_socket_limit, [], :size_t, **opts
       attach_function :zsys_set_max_msgsz, [:int], :void, **opts
@@ -806,6 +826,10 @@ module CZMQ
       attach_function :zsys_ipv6_mcast_address, [], :string, **opts
       attach_function :zsys_set_auto_use_fd, [:int], :void, **opts
       attach_function :zsys_auto_use_fd, [], :int, **opts
+      attach_function :zsys_zprintf, [:string, :pointer], :pointer, **opts
+      attach_function :zsys_zprintf_error, [:string, :pointer], :pointer, **opts
+      attach_function :zsys_zplprintf, [:string, :pointer], :pointer, **opts
+      attach_function :zsys_zplprintf_error, [:string, :pointer], :pointer, **opts
       attach_function :zsys_set_logident, [:string], :void, **opts
       attach_function :zsys_set_logstream, [:pointer], :void, **opts
       attach_function :zsys_set_logsender, [:string], :void, **opts
@@ -861,6 +885,16 @@ module CZMQ
       attach_function :zuuid_test, [:bool], :void, **opts
 
       require_relative 'ffi/zuuid'
+
+      attach_function :zhttp_client_new, [:bool], :pointer, **opts
+      attach_function :zhttp_client_destroy, [:pointer], :void, **opts
+      attach_function :zhttp_client_get, [:pointer, :string, :pointer, :int, :pointer, :pointer], :int, **opts
+      attach_function :zhttp_client_post, [:pointer, :string, :pointer, :pointer, :int, :pointer, :pointer], :int, **opts
+      attach_function :zhttp_client_execute, [:pointer], :int, **opts
+      attach_function :zhttp_client_wait, [:pointer, :int], :int, **opts
+      attach_function :zhttp_client_test, [:bool], :void, **opts
+
+      require_relative 'ffi/zhttp_client'
     end
   end
 end

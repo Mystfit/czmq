@@ -233,6 +233,30 @@ CZMQ_EXPORT void
 CZMQ_EXPORT void
     zsys_set_thread_priority (int priority);
 
+//  Configure the numeric prefix to each thread created for the internal
+//  context's thread pool. This option is only supported on Linux.
+//  If the environment variable ZSYS_THREAD_NAME_PREFIX is defined, that
+//  provides the default.
+//  Note that this method is valid only before any socket is created.
+CZMQ_EXPORT void
+    zsys_set_thread_name_prefix (int prefix);
+
+//  Return thread name prefix.
+CZMQ_EXPORT int
+    zsys_thread_name_prefix (void);
+
+//  Adds a specific CPU to the affinity list of the ZMQ context thread pool.
+//  This option is only supported on Linux.
+//  Note that this method is valid only before any socket is created.
+CZMQ_EXPORT void
+    zsys_thread_affinity_cpu_add (int cpu);
+
+//  Removes a specific CPU to the affinity list of the ZMQ context thread pool.
+//  This option is only supported on Linux.
+//  Note that this method is valid only before any socket is created.
+CZMQ_EXPORT void
+    zsys_thread_affinity_cpu_remove (int cpu);
+
 //  Configure the number of sockets that ZeroMQ will allow. The default
 //  is 1024. The actual limit depends on the system, and you can query it
 //  by using zsys_socket_limit (). A value of zero means "maximum".
@@ -444,6 +468,46 @@ CZMQ_EXPORT void
 //  before testing if a filesystem object is "stable" or not.
 CZMQ_EXPORT int64_t
     zsys_file_stable_age_msec (void);
+
+//  *** Draft method, for development use, may change without warning ***
+//  Print formatted string. Format is specified by variable names
+//  in Python-like format style
+//
+//  "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+//  become
+//  "key=value"
+//
+//  Returns freshly allocated string or NULL in a case of error.
+//  Not enough memory, invalid format specifier, name not in args
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT char *
+    zsys_zprintf (const char *format, zhash_t *args);
+
+//  *** Draft method, for development use, may change without warning ***
+//  Return error string for given format/args combination.
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT char *
+    zsys_zprintf_error (const char *format, zhash_t *args);
+
+//  *** Draft method, for development use, may change without warning ***
+//  Print formatted string. Format is specified by variable names
+//  in Python-like format style
+//
+//  "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+//  become
+//  "key=value"
+//
+//  Returns freshly allocated string or NULL in a case of error.
+//  Not enough memory, invalid format specifier, name not in args
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT char *
+    zsys_zplprintf (const char *format, zconfig_t *args);
+
+//  *** Draft method, for development use, may change without warning ***
+//  Return error string for given format/args combination.
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT char *
+    zsys_zplprintf_error (const char *format, zconfig_t *args);
 
 #endif // CZMQ_BUILD_DRAFT_API
 //  @end

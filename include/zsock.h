@@ -166,6 +166,7 @@ CZMQ_EXPORT const char *
 //      c = zchunk_t *
 //      f = zframe_t *
 //      h = zhashx_t *
+//      l = zlistx_t * (DRAFT)
 //      U = zuuid_t *
 //      p = void * (sends the pointer value, only meaningful over inproc)
 //      m = zmsg_t * (sends all frames in the zmsg)
@@ -199,6 +200,7 @@ CZMQ_EXPORT int
 //      f = zframe_t ** (creates zframe)
 //      U = zuuid_t * (creates a zuuid with the data)
 //      h = zhashx_t ** (creates zhashx)
+//      l = zlistx_t ** (creates zlistx) (DRAFT)
 //      p = void ** (stores pointer)
 //      m = zmsg_t ** (creates a zmsg with the remaining frames)
 //      z = null, asserts empty frame (0 arguments)
@@ -303,6 +305,61 @@ CZMQ_EXPORT bool
 //  return the supplied value. Takes a polymorphic socket reference.
 CZMQ_EXPORT void *
     zsock_resolve (void *self);
+
+//  Get socket option `router_notify`.
+//  Available from libzmq 4.3.0.
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT int
+    zsock_router_notify (void *self);
+
+//  Set socket option `router_notify`.
+//  Available from libzmq 4.3.0.
+CZMQ_EXPORT void
+    zsock_set_router_notify (void *self, int router_notify);
+
+//  Get socket option `multicast_loop`.
+//  Available from libzmq 4.3.0.
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT int
+    zsock_multicast_loop (void *self);
+
+//  Set socket option `multicast_loop`.
+//  Available from libzmq 4.3.0.
+CZMQ_EXPORT void
+    zsock_set_multicast_loop (void *self, int multicast_loop);
+
+//  Get socket option `metadata`.
+//  Available from libzmq 4.3.0.
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT char *
+    zsock_metadata (void *self);
+
+//  Set socket option `metadata`.
+//  Available from libzmq 4.3.0.
+CZMQ_EXPORT void
+    zsock_set_metadata (void *self, const char *metadata);
+
+//  Get socket option `loopback_fastpath`.
+//  Available from libzmq 4.3.0.
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT int
+    zsock_loopback_fastpath (void *self);
+
+//  Set socket option `loopback_fastpath`.
+//  Available from libzmq 4.3.0.
+CZMQ_EXPORT void
+    zsock_set_loopback_fastpath (void *self, int loopback_fastpath);
+
+//  Get socket option `zap_enforce_domain`.
+//  Available from libzmq 4.3.0.
+//  Caller owns return value and must destroy it when done.
+CZMQ_EXPORT int
+    zsock_zap_enforce_domain (void *self);
+
+//  Set socket option `zap_enforce_domain`.
+//  Available from libzmq 4.3.0.
+CZMQ_EXPORT void
+    zsock_set_zap_enforce_domain (void *self, int zap_enforce_domain);
 
 //  Get socket option `gssapi_principal_nametype`.
 //  Available from libzmq 4.3.0.
@@ -1147,6 +1204,11 @@ CZMQ_EXPORT int
 //  Returns 0 if OK, -1 if failed.
 CZMQ_EXPORT int
     zsock_leave (void *self, const char *group);
+
+//  *** Draft method, for development use, may change without warning ***
+//  Check whether the socket has available message to read.
+CZMQ_EXPORT bool
+    zsock_has_in (void *self);
 
 #endif // CZMQ_BUILD_DRAFT_API
 //  @end

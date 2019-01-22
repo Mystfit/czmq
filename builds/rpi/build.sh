@@ -53,7 +53,16 @@ if [ $UPDATE ]; then
 fi
 
 # Cross build for the Raspberry Pi
-mkdir -p $PWD/tmp
+if [ -d "./tmp" ]; then
+    # Proto installation area for this project and its deps
+    rm -rf ./tmp
+fi
+if [ -d "./tmp-deps" ]; then
+    # Checkout/unpack and build area for dependencies
+    rm -rf ./tmp-deps
+fi
+mkdir -p tmp tmp-deps
+
 BUILD_PREFIX=$PWD/tmp
 TOOLCHAIN_HOST="arm-linux-gnueabihf"
 TOOLCHAIN_PATH="${PWD}/tools/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf/bin"
@@ -95,6 +104,8 @@ CONFIG_OPTS+=("RANLIB=${RANLIB}")
 
 if [ ! $INCREMENTAL ]; then
     # Clone and build dependencies
+    BASE_PWD=${PWD}
+    cd tmp-deps
     if [ ! -e libzmq ]; then
         $CI_TIME git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git libzmq
     fi
@@ -123,6 +134,39 @@ if [ ! $INCREMENTAL ]; then
         $CI_TIME make install
     ) || exit 1
     popd
+    cd ${BASE_PWD}
+
+    BASE_PWD=${PWD}
+    cd tmp-deps
+    if [ ! -e libcurl ]; then
+        $CI_TIME git clone --quiet --depth 1 https://github.com/curl/curl.git libcurl
+    fi
+    pushd libcurl
+    (
+        if [ $UPDATE ]; then
+            $CI_TIME git pull --rebase
+        fi
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+    ) || exit 1
+    popd
+    cd ${BASE_PWD}
 
 fi
 

@@ -93,6 +93,25 @@ CZMQ_PRIVATE void
 CZMQ_PRIVATE zlistx_t *
     zcertstore_certs (zcertstore_t *self);
 
+//  *** Draft callbacks, defined for internal use only ***
+// Destroy an item
+typedef void (zchunk_destructor_fn) (
+    void *hint, byte **item);
+
+//  *** Draft method, defined for internal use only ***
+//  Create a new chunk from memory. Take ownership of the memory and calling the destructor
+//  on destroy.
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE zchunk_t *
+    zchunk_frommem (byte **data_p, size_t size, zchunk_destructor_fn destructor, void *hint);
+
+//  *** Draft method, defined for internal use only ***
+//  Transform zchunk into a zframe that can be sent in a message.
+//  Take ownership of the chunk.
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE zframe_t *
+    zchunk_packx (zchunk_t **self_p);
+
 //  *** Draft method, defined for internal use only ***
 //  Create copy of zconfig, caller MUST free the value
 //  Create copy of config, as new zconfig object. Returns a fresh zconfig_t
@@ -117,6 +136,18 @@ CZMQ_PRIVATE void
 //  Caller owns return value and must destroy it when done.
 CZMQ_PRIVATE zfile_t *
     zfile_tmp (void);
+
+//  *** Draft callbacks, defined for internal use only ***
+// Destroy an item
+typedef void (zframe_destructor_fn) (
+    void *hint, byte **item);
+
+//  *** Draft method, defined for internal use only ***
+//  Create a new frame from memory. Take ownership of the memory and calling the destructor
+//  on destroy.
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE zframe_t *
+    zframe_frommem (byte **data_p, size_t size, zframe_destructor_fn destructor, void *hint);
 
 //  *** Draft method, defined for internal use only ***
 //  Return frame routing ID, if the frame came from a ZMQ_SERVER socket.
@@ -172,6 +203,31 @@ CZMQ_PRIVATE void
 //  Return true if the current interface uses IPv6
 CZMQ_PRIVATE bool
     ziflist_is_ipv6 (ziflist_t *self);
+
+//  *** Draft method, defined for internal use only ***
+//  Serialize list to a binary frame that can be sent in a message.
+//  The packed format is compatible with the 'strings' type implemented by zproto:
+//
+//     ; A list of strings
+//     list            = list-count *longstr
+//     list-count      = number-4
+//
+//     ; Strings are always length + text contents
+//     longstr         = number-4 *VCHAR
+//
+//     ; Numbers are unsigned integers in network byte order
+//     number-4        = 4OCTET
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE zframe_t *
+    zlistx_pack (zlistx_t *self);
+
+//  *** Draft method, defined for internal use only ***
+//  Unpack binary frame into a new list. Packed data must follow format
+//  defined by zlistx_pack. List is set to autofree. An empty frame
+//  unpacks to an empty list.
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE zlistx_t *
+    zlistx_unpack (zframe_t *frame);
 
 //  *** Draft method, defined for internal use only ***
 //  Return message routing ID, if the message came from a ZMQ_SERVER socket.
@@ -246,6 +302,11 @@ CZMQ_PRIVATE int
     zsock_leave (void *self, const char *group);
 
 //  *** Draft method, defined for internal use only ***
+//  Check whether the socket has available message to read.
+CZMQ_PRIVATE bool
+    zsock_has_in (void *self);
+
+//  *** Draft method, defined for internal use only ***
 //  De-compress and receive C string from socket, received as a message
 //  with two frames: size of the uncompressed string, and the string itself.
 //  Caller must free returned string using zstr_free(). Returns NULL if the
@@ -318,6 +379,46 @@ CZMQ_PRIVATE void
 //  before testing if a filesystem object is "stable" or not.
 CZMQ_PRIVATE int64_t
     zsys_file_stable_age_msec (void);
+
+//  *** Draft method, defined for internal use only ***
+//  Print formatted string. Format is specified by variable names
+//  in Python-like format style
+//
+//  "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+//  become
+//  "key=value"
+//
+//  Returns freshly allocated string or NULL in a case of error.
+//  Not enough memory, invalid format specifier, name not in args
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE char *
+    zsys_zprintf (const char *format, zhash_t *args);
+
+//  *** Draft method, defined for internal use only ***
+//  Return error string for given format/args combination.
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE char *
+    zsys_zprintf_error (const char *format, zhash_t *args);
+
+//  *** Draft method, defined for internal use only ***
+//  Print formatted string. Format is specified by variable names
+//  in Python-like format style
+//
+//  "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+//  become
+//  "key=value"
+//
+//  Returns freshly allocated string or NULL in a case of error.
+//  Not enough memory, invalid format specifier, name not in args
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE char *
+    zsys_zplprintf (const char *format, zconfig_t *args);
+
+//  *** Draft method, defined for internal use only ***
+//  Return error string for given format/args combination.
+//  Caller owns return value and must destroy it when done.
+CZMQ_PRIVATE char *
+    zsys_zplprintf_error (const char *format, zconfig_t *args);
 
 //  *** Draft constants, defined for internal use only ***
 #define ZGOSSIP_MSG_HELLO 1                 //

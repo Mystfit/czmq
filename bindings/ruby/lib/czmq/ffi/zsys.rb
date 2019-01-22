@@ -503,6 +503,52 @@ module CZMQ
         result
       end
 
+      # Configure the numeric prefix to each thread created for the internal
+      # context's thread pool. This option is only supported on Linux.
+      # If the environment variable ZSYS_THREAD_NAME_PREFIX is defined, that
+      # provides the default.
+      # Note that this method is valid only before any socket is created.
+      #
+      # @param prefix [Integer, #to_int, #to_i]
+      # @return [void]
+      def self.set_thread_name_prefix(prefix)
+        prefix = Integer(prefix)
+        result = ::CZMQ::FFI.zsys_set_thread_name_prefix(prefix)
+        result
+      end
+
+      # Return thread name prefix.
+      #
+      # @return [Integer]
+      def self.thread_name_prefix()
+        result = ::CZMQ::FFI.zsys_thread_name_prefix()
+        result
+      end
+
+      # Adds a specific CPU to the affinity list of the ZMQ context thread pool.
+      # This option is only supported on Linux.
+      # Note that this method is valid only before any socket is created.
+      #
+      # @param cpu [Integer, #to_int, #to_i]
+      # @return [void]
+      def self.thread_affinity_cpu_add(cpu)
+        cpu = Integer(cpu)
+        result = ::CZMQ::FFI.zsys_thread_affinity_cpu_add(cpu)
+        result
+      end
+
+      # Removes a specific CPU to the affinity list of the ZMQ context thread pool.
+      # This option is only supported on Linux.
+      # Note that this method is valid only before any socket is created.
+      #
+      # @param cpu [Integer, #to_int, #to_i]
+      # @return [void]
+      def self.thread_affinity_cpu_remove(cpu)
+        cpu = Integer(cpu)
+        result = ::CZMQ::FFI.zsys_thread_affinity_cpu_remove(cpu)
+        result
+      end
+
       # Configure the number of sockets that ZeroMQ will allow. The default
       # is 1024. The actual limit depends on the system, and you can query it
       # by using zsys_socket_limit (). A value of zero means "maximum".
@@ -756,6 +802,70 @@ module CZMQ
       # @return [Integer]
       def self.auto_use_fd()
         result = ::CZMQ::FFI.zsys_auto_use_fd()
+        result
+      end
+
+      # Print formatted string. Format is specified by variable names
+      # in Python-like format style
+      #
+      # "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+      # become
+      # "key=value"
+      #
+      # Returns freshly allocated string or NULL in a case of error.
+      # Not enough memory, invalid format specifier, name not in args
+      #
+      # @param format [String, #to_s, nil]
+      # @param args [Zhash, #__ptr]
+      # @return [::FFI::AutoPointer]
+      def self.zprintf(format, args)
+        args = args.__ptr if args
+        result = ::CZMQ::FFI.zsys_zprintf(format, args)
+        result = ::FFI::AutoPointer.new(result, LibC.method(:free))
+        result
+      end
+
+      # Return error string for given format/args combination.
+      #
+      # @param format [String, #to_s, nil]
+      # @param args [Zhash, #__ptr]
+      # @return [::FFI::AutoPointer]
+      def self.zprintf_error(format, args)
+        args = args.__ptr if args
+        result = ::CZMQ::FFI.zsys_zprintf_error(format, args)
+        result = ::FFI::AutoPointer.new(result, LibC.method(:free))
+        result
+      end
+
+      # Print formatted string. Format is specified by variable names
+      # in Python-like format style
+      #
+      # "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+      # become
+      # "key=value"
+      #
+      # Returns freshly allocated string or NULL in a case of error.
+      # Not enough memory, invalid format specifier, name not in args
+      #
+      # @param format [String, #to_s, nil]
+      # @param args [Zconfig, #__ptr]
+      # @return [::FFI::AutoPointer]
+      def self.zplprintf(format, args)
+        args = args.__ptr if args
+        result = ::CZMQ::FFI.zsys_zplprintf(format, args)
+        result = ::FFI::AutoPointer.new(result, LibC.method(:free))
+        result
+      end
+
+      # Return error string for given format/args combination.
+      #
+      # @param format [String, #to_s, nil]
+      # @param args [Zconfig, #__ptr]
+      # @return [::FFI::AutoPointer]
+      def self.zplprintf_error(format, args)
+        args = args.__ptr if args
+        result = ::CZMQ::FFI.zsys_zplprintf_error(format, args)
+        result = ::FFI::AutoPointer.new(result, LibC.method(:free))
         result
       end
 

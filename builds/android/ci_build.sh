@@ -19,7 +19,7 @@ fi
 export FILENAME=$NDK_VER-$NDK_PLATFORM.zip
 
 (cd '/tmp' \
-    && wget http://dl.google.com/android/repository/$FILENAME \
+    && wget http://dl.google.com/android/repository/$FILENAME &> /dev/null \
     && unzip $FILENAME &> /dev/null ) || exit 1
 unset FILENAME
 
@@ -30,8 +30,14 @@ export TOOLCHAIN_NAME="arm-linux-androideabi-$NDK_ABI_VER"
 export TOOLCHAIN_HOST="arm-linux-androideabi"
 export TOOLCHAIN_ARCH="arm"
 
-export LIBZMQ_ROOT="/tmp/libzmq"
+rm -rf /tmp/tmp-deps
+mkdir -p /tmp/tmp-deps
+
+export LIBZMQ_ROOT="/tmp/tmp-deps/libzmq"
 git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git $LIBZMQ_ROOT
+
+export LIBCURL_ROOT="/tmp/tmp-deps/libcurl"
+git clone --quiet --depth 1 https://github.com/curl/curl.git $LIBCURL_ROOT
 
 source ./build.sh
 

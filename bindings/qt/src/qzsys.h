@@ -183,6 +183,26 @@ public:
     //  Note that this method is valid only before any socket is created.
     static void setThreadPriority (int priority);
 
+    //  Configure the numeric prefix to each thread created for the internal
+    //  context's thread pool. This option is only supported on Linux.
+    //  If the environment variable ZSYS_THREAD_NAME_PREFIX is defined, that
+    //  provides the default.
+    //  Note that this method is valid only before any socket is created.
+    static void setThreadNamePrefix (int prefix);
+
+    //  Return thread name prefix.
+    static int threadNamePrefix ();
+
+    //  Adds a specific CPU to the affinity list of the ZMQ context thread pool.
+    //  This option is only supported on Linux.
+    //  Note that this method is valid only before any socket is created.
+    static void threadAffinityCpuAdd (int cpu);
+
+    //  Removes a specific CPU to the affinity list of the ZMQ context thread pool.
+    //  This option is only supported on Linux.
+    //  Note that this method is valid only before any socket is created.
+    static void threadAffinityCpuRemove (int cpu);
+
     //  Configure the number of sockets that ZeroMQ will allow. The default
     //  is 1024. The actual limit depends on the system, and you can query it
     //  by using zsys_socket_limit (). A value of zero means "maximum".
@@ -301,6 +321,34 @@ public:
 
     //  Return use of automatic pre-allocated FDs for zsock instances.
     static int autoUseFd ();
+
+    //  Print formatted string. Format is specified by variable names
+    //  in Python-like format style
+    //
+    //  "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+    //  become
+    //  "key=value"
+    //
+    //  Returns freshly allocated string or NULL in a case of error.
+    //  Not enough memory, invalid format specifier, name not in args
+    static QString zprintf (const QString &format, QZhash *args);
+
+    //  Return error string for given format/args combination.
+    static QString zprintfError (const QString &format, QZhash *args);
+
+    //  Print formatted string. Format is specified by variable names
+    //  in Python-like format style
+    //
+    //  "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+    //  become
+    //  "key=value"
+    //
+    //  Returns freshly allocated string or NULL in a case of error.
+    //  Not enough memory, invalid format specifier, name not in args
+    static QString zplprintf (const QString &format, QZconfig *args);
+
+    //  Return error string for given format/args combination.
+    static QString zplprintfError (const QString &format, QZconfig *args);
 
     //  Set log identity, which is a string that prefixes all log messages sent
     //  by this process. The log identity defaults to the environment variable

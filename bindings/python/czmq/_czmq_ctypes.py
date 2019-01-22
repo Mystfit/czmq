@@ -179,6 +179,10 @@ class zuuid_t(Structure):
     pass # Empty - only for type checking
 zuuid_p = POINTER(zuuid_t)
 
+class zhttp_client_t(Structure):
+    pass # Empty - only for type checking
+zhttp_client_p = POINTER(zhttp_client_t)
+
 def return_py_file(c_file):
     if not sys.version_info > (3,):
         PyFile_FromFile_close_cb = CFUNCTYPE(c_int, FILE_p)
@@ -1071,10 +1075,13 @@ objects.
 
 
 # zchunk
+zchunk_destructor_fn = CFUNCTYPE(None, c_void_p, POINTER(c_void_p))
 lib.zchunk_new.restype = zchunk_p
 lib.zchunk_new.argtypes = [c_void_p, c_size_t]
 lib.zchunk_destroy.restype = None
 lib.zchunk_destroy.argtypes = [POINTER(zchunk_p)]
+lib.zchunk_frommem.restype = zchunk_p
+lib.zchunk_frommem.argtypes = [POINTER(c_void_p), c_size_t, zchunk_destructor_fn, c_void_p]
 lib.zchunk_resize.restype = None
 lib.zchunk_resize.argtypes = [zchunk_p, c_size_t]
 lib.zchunk_size.restype = c_size_t
@@ -1111,6 +1118,8 @@ lib.zchunk_streq.restype = c_bool
 lib.zchunk_streq.argtypes = [zchunk_p, c_char_p]
 lib.zchunk_pack.restype = zframe_p
 lib.zchunk_pack.argtypes = [zchunk_p]
+lib.zchunk_packx.restype = zframe_p
+lib.zchunk_packx.argtypes = [POINTER(zchunk_p)]
 lib.zchunk_unpack.restype = zchunk_p
 lib.zchunk_unpack.argtypes = [zframe_p]
 lib.zchunk_digest.restype = c_char_p
@@ -1173,6 +1182,14 @@ allocated and left empty, and you can then add data using zchunk_append.
     def __nonzero__(self):
         "Determine whether the object is valid by converting to boolean" # Python 2
         return self._as_parameter_.__nonzero__()
+
+    @staticmethod
+    def frommem(data_p, size, destructor, hint):
+        """
+        Create a new chunk from memory. Take ownership of the memory and calling the destructor
+on destroy.
+        """
+        return Zchunk(lib.zchunk_frommem(byref(c_void_p.from_param(data_p)), size, destructor, hint), True)
 
     def resize(self, size):
         """
@@ -1298,6 +1315,14 @@ Caller must free string when finished with it.
         Transform zchunk into a zframe that can be sent in a message.
         """
         return Zframe(lib.zchunk_pack(self._as_parameter_), True)
+
+    @staticmethod
+    def packx(self_p):
+        """
+        Transform zchunk into a zframe that can be sent in a message.
+Take ownership of the chunk.
+        """
+        return Zframe(lib.zchunk_packx(byref(zchunk_p.from_param(self_p))), True)
 
     @staticmethod
     def unpack(frame):
@@ -2445,6 +2470,7 @@ or NULL if there was nothing more to read from the file.
 
 
 # zframe
+zframe_destructor_fn = CFUNCTYPE(None, c_void_p, POINTER(c_void_p))
 lib.zframe_new.restype = zframe_p
 lib.zframe_new.argtypes = [c_void_p, c_size_t]
 lib.zframe_destroy.restype = None
@@ -2453,6 +2479,8 @@ lib.zframe_new_empty.restype = zframe_p
 lib.zframe_new_empty.argtypes = []
 lib.zframe_from.restype = zframe_p
 lib.zframe_from.argtypes = [c_char_p]
+lib.zframe_frommem.restype = zframe_p
+lib.zframe_frommem.argtypes = [POINTER(c_void_p), c_size_t, zframe_destructor_fn, c_void_p]
 lib.zframe_recv.restype = zframe_p
 lib.zframe_recv.argtypes = [c_void_p]
 lib.zframe_send.restype = c_int
@@ -2560,6 +2588,14 @@ size octets from the specified data into the frame body.
         Create a frame with a specified string content.
         """
         return Zframe(lib.zframe_from(string), True)
+
+    @staticmethod
+    def frommem(data_p, size, destructor, hint):
+        """
+        Create a new frame from memory. Take ownership of the memory and calling the destructor
+on destroy.
+        """
+        return Zframe(lib.zframe_frommem(byref(c_void_p.from_param(data_p)), size, destructor, hint), True)
 
     @staticmethod
     def recv(source):
@@ -3760,6 +3796,8 @@ lib.zlistx_new.restype = zlistx_p
 lib.zlistx_new.argtypes = []
 lib.zlistx_destroy.restype = None
 lib.zlistx_destroy.argtypes = [POINTER(zlistx_p)]
+lib.zlistx_unpack.restype = zlistx_p
+lib.zlistx_unpack.argtypes = [zframe_p]
 lib.zlistx_add_start.restype = c_void_p
 lib.zlistx_add_start.argtypes = [zlistx_p, c_void_p]
 lib.zlistx_add_end.restype = c_void_p
@@ -3812,6 +3850,8 @@ lib.zlistx_set_duplicator.restype = None
 lib.zlistx_set_duplicator.argtypes = [zlistx_p, zlistx_duplicator_fn]
 lib.zlistx_set_comparator.restype = None
 lib.zlistx_set_comparator.argtypes = [zlistx_p, zlistx_comparator_fn]
+lib.zlistx_pack.restype = zframe_p
+lib.zlistx_pack.argtypes = [zlistx_p]
 lib.zlistx_test.restype = None
 lib.zlistx_test.argtypes = [c_bool]
 
@@ -3863,6 +3903,15 @@ list are automatically destroyed as well.
     def __nonzero__(self):
         "Determine whether the object is valid by converting to boolean" # Python 2
         return self._as_parameter_.__nonzero__()
+
+    @staticmethod
+    def unpack(frame):
+        """
+        Unpack binary frame into a new list. Packed data must follow format
+defined by zlistx_pack. List is set to autofree. An empty frame
+unpacks to an empty list.
+        """
+        return Zlistx(lib.zlistx_unpack(frame), True)
 
     def add_start(self, item):
         """
@@ -4063,6 +4112,23 @@ must return -1, 0, or 1 depending on whether item1 is less than, equal to,
 or greater than, item2.
         """
         return lib.zlistx_set_comparator(self._as_parameter_, comparator)
+
+    def pack(self):
+        """
+        Serialize list to a binary frame that can be sent in a message.
+The packed format is compatible with the 'strings' type implemented by zproto:
+
+   ; A list of strings
+   list            = list-count *longstr
+   list-count      = number-4
+
+   ; Strings are always length + text contents
+   longstr         = number-4 *VCHAR
+
+   ; Numbers are unsigned integers in network byte order
+   number-4        = 4OCTET
+        """
+        return Zframe(lib.zlistx_pack(self._as_parameter_), True)
 
     @staticmethod
     def test(verbose):
@@ -5137,6 +5203,28 @@ lib.zsock_is.restype = c_bool
 lib.zsock_is.argtypes = [c_void_p]
 lib.zsock_resolve.restype = c_void_p
 lib.zsock_resolve.argtypes = [c_void_p]
+lib.zsock_has_in.restype = c_bool
+lib.zsock_has_in.argtypes = [zsock_p]
+lib.zsock_router_notify.restype = c_int
+lib.zsock_router_notify.argtypes = [zsock_p]
+lib.zsock_set_router_notify.restype = None
+lib.zsock_set_router_notify.argtypes = [zsock_p, c_int]
+lib.zsock_multicast_loop.restype = c_int
+lib.zsock_multicast_loop.argtypes = [zsock_p]
+lib.zsock_set_multicast_loop.restype = None
+lib.zsock_set_multicast_loop.argtypes = [zsock_p, c_int]
+lib.zsock_metadata.restype = POINTER(c_char)
+lib.zsock_metadata.argtypes = [zsock_p]
+lib.zsock_set_metadata.restype = None
+lib.zsock_set_metadata.argtypes = [zsock_p, c_char_p]
+lib.zsock_loopback_fastpath.restype = c_int
+lib.zsock_loopback_fastpath.argtypes = [zsock_p]
+lib.zsock_set_loopback_fastpath.restype = None
+lib.zsock_set_loopback_fastpath.argtypes = [zsock_p, c_int]
+lib.zsock_zap_enforce_domain.restype = c_int
+lib.zsock_zap_enforce_domain.argtypes = [zsock_p]
+lib.zsock_set_zap_enforce_domain.restype = None
+lib.zsock_set_zap_enforce_domain.argtypes = [zsock_p, c_int]
 lib.zsock_gssapi_principal_nametype.restype = c_int
 lib.zsock_gssapi_principal_nametype.argtypes = [zsock_p]
 lib.zsock_set_gssapi_principal_nametype.restype = None
@@ -5697,6 +5785,7 @@ of these characters, each corresponding to one or two arguments:
     c = zchunk_t *
     f = zframe_t *
     h = zhashx_t *
+    l = zlistx_t * (DRAFT)
     U = zuuid_t *
     p = void * (sends the pointer value, only meaningful over inproc)
     m = zmsg_t * (sends all frames in the zmsg)
@@ -5734,6 +5823,7 @@ a series of pointers as provided by the caller:
     f = zframe_t ** (creates zframe)
     U = zuuid_t * (creates a zuuid with the data)
     h = zhashx_t ** (creates zhashx)
+    l = zlistx_t ** (creates zlistx) (DRAFT)
     p = void ** (stores pointer)
     m = zmsg_t ** (creates a zmsg with the remaining frames)
     z = null, asserts empty frame (0 arguments)
@@ -5886,6 +5976,82 @@ descriptor, return NULL; else if it looks like a libzmq socket handle,
 return the supplied value. Takes a polymorphic socket reference.
         """
         return c_void_p(lib.zsock_resolve(self))
+
+    def has_in(self):
+        """
+        Check whether the socket has available message to read.
+        """
+        return lib.zsock_has_in(self._as_parameter_)
+
+    def router_notify(self):
+        """
+        Get socket option `router_notify`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_router_notify(self._as_parameter_)
+
+    def set_router_notify(self, router_notify):
+        """
+        Set socket option `router_notify`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_set_router_notify(self._as_parameter_, router_notify)
+
+    def multicast_loop(self):
+        """
+        Get socket option `multicast_loop`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_multicast_loop(self._as_parameter_)
+
+    def set_multicast_loop(self, multicast_loop):
+        """
+        Set socket option `multicast_loop`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_set_multicast_loop(self._as_parameter_, multicast_loop)
+
+    def metadata(self):
+        """
+        Get socket option `metadata`.
+Available from libzmq 4.3.0.
+        """
+        return return_fresh_string(lib.zsock_metadata(self._as_parameter_))
+
+    def set_metadata(self, metadata):
+        """
+        Set socket option `metadata`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_set_metadata(self._as_parameter_, metadata)
+
+    def loopback_fastpath(self):
+        """
+        Get socket option `loopback_fastpath`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_loopback_fastpath(self._as_parameter_)
+
+    def set_loopback_fastpath(self, loopback_fastpath):
+        """
+        Set socket option `loopback_fastpath`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_set_loopback_fastpath(self._as_parameter_, loopback_fastpath)
+
+    def zap_enforce_domain(self):
+        """
+        Get socket option `zap_enforce_domain`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_zap_enforce_domain(self._as_parameter_)
+
+    def set_zap_enforce_domain(self, zap_enforce_domain):
+        """
+        Set socket option `zap_enforce_domain`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_set_zap_enforce_domain(self._as_parameter_, zap_enforce_domain)
 
     def gssapi_principal_nametype(self):
         """
@@ -7151,6 +7317,14 @@ lib.zsys_set_thread_sched_policy.restype = None
 lib.zsys_set_thread_sched_policy.argtypes = [c_int]
 lib.zsys_set_thread_priority.restype = None
 lib.zsys_set_thread_priority.argtypes = [c_int]
+lib.zsys_set_thread_name_prefix.restype = None
+lib.zsys_set_thread_name_prefix.argtypes = [c_int]
+lib.zsys_thread_name_prefix.restype = c_int
+lib.zsys_thread_name_prefix.argtypes = []
+lib.zsys_thread_affinity_cpu_add.restype = None
+lib.zsys_thread_affinity_cpu_add.argtypes = [c_int]
+lib.zsys_thread_affinity_cpu_remove.restype = None
+lib.zsys_thread_affinity_cpu_remove.argtypes = [c_int]
 lib.zsys_set_max_sockets.restype = None
 lib.zsys_set_max_sockets.argtypes = [c_size_t]
 lib.zsys_socket_limit.restype = c_size_t
@@ -7197,6 +7371,14 @@ lib.zsys_set_auto_use_fd.restype = None
 lib.zsys_set_auto_use_fd.argtypes = [c_int]
 lib.zsys_auto_use_fd.restype = c_int
 lib.zsys_auto_use_fd.argtypes = []
+lib.zsys_zprintf.restype = POINTER(c_char)
+lib.zsys_zprintf.argtypes = [c_char_p, zhash_p]
+lib.zsys_zprintf_error.restype = POINTER(c_char)
+lib.zsys_zprintf_error.argtypes = [c_char_p, zhash_p]
+lib.zsys_zplprintf.restype = POINTER(c_char)
+lib.zsys_zplprintf.argtypes = [c_char_p, zconfig_p]
+lib.zsys_zplprintf_error.restype = POINTER(c_char)
+lib.zsys_zplprintf_error.argtypes = [c_char_p, zconfig_p]
 lib.zsys_set_logident.restype = None
 lib.zsys_set_logident.argtypes = [c_char_p]
 lib.zsys_set_logstream.restype = None
@@ -7567,6 +7749,42 @@ Note that this method is valid only before any socket is created.
         return lib.zsys_set_thread_priority(priority)
 
     @staticmethod
+    def set_thread_name_prefix(prefix):
+        """
+        Configure the numeric prefix to each thread created for the internal
+context's thread pool. This option is only supported on Linux.
+If the environment variable ZSYS_THREAD_NAME_PREFIX is defined, that
+provides the default.
+Note that this method is valid only before any socket is created.
+        """
+        return lib.zsys_set_thread_name_prefix(prefix)
+
+    @staticmethod
+    def thread_name_prefix():
+        """
+        Return thread name prefix.
+        """
+        return lib.zsys_thread_name_prefix()
+
+    @staticmethod
+    def thread_affinity_cpu_add(cpu):
+        """
+        Adds a specific CPU to the affinity list of the ZMQ context thread pool.
+This option is only supported on Linux.
+Note that this method is valid only before any socket is created.
+        """
+        return lib.zsys_thread_affinity_cpu_add(cpu)
+
+    @staticmethod
+    def thread_affinity_cpu_remove(cpu):
+        """
+        Removes a specific CPU to the affinity list of the ZMQ context thread pool.
+This option is only supported on Linux.
+Note that this method is valid only before any socket is created.
+        """
+        return lib.zsys_thread_affinity_cpu_remove(cpu)
+
+    @staticmethod
     def set_max_sockets(max_sockets):
         """
         Configure the number of sockets that ZeroMQ will allow. The default
@@ -7776,6 +7994,50 @@ instead of creating a new socket.
         Return use of automatic pre-allocated FDs for zsock instances.
         """
         return lib.zsys_auto_use_fd()
+
+    @staticmethod
+    def zprintf(format, args):
+        """
+        Print formatted string. Format is specified by variable names
+in Python-like format style
+
+"%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+become
+"key=value"
+
+Returns freshly allocated string or NULL in a case of error.
+Not enough memory, invalid format specifier, name not in args
+        """
+        return return_fresh_string(lib.zsys_zprintf(format, args))
+
+    @staticmethod
+    def zprintf_error(format, args):
+        """
+        Return error string for given format/args combination.
+        """
+        return return_fresh_string(lib.zsys_zprintf_error(format, args))
+
+    @staticmethod
+    def zplprintf(format, args):
+        """
+        Print formatted string. Format is specified by variable names
+in Python-like format style
+
+"%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+become
+"key=value"
+
+Returns freshly allocated string or NULL in a case of error.
+Not enough memory, invalid format specifier, name not in args
+        """
+        return return_fresh_string(lib.zsys_zplprintf(format, args))
+
+    @staticmethod
+    def zplprintf_error(format, args):
+        """
+        Return error string for given format/args combination.
+        """
+        return return_fresh_string(lib.zsys_zplprintf_error(format, args))
 
     @staticmethod
     def set_logident(value):
@@ -8271,6 +8533,114 @@ returns null.
         Self test of this class.
         """
         return lib.zuuid_test(verbose)
+
+
+# zhttp_client
+zhttp_client_fn = CFUNCTYPE(None, c_void_p, c_int, zchunk_p)
+lib.zhttp_client_new.restype = zhttp_client_p
+lib.zhttp_client_new.argtypes = [c_bool]
+lib.zhttp_client_destroy.restype = None
+lib.zhttp_client_destroy.argtypes = [POINTER(zhttp_client_p)]
+lib.zhttp_client_get.restype = c_int
+lib.zhttp_client_get.argtypes = [zhttp_client_p, c_char_p, zlistx_p, c_int, zhttp_client_fn, c_void_p]
+lib.zhttp_client_post.restype = c_int
+lib.zhttp_client_post.argtypes = [zhttp_client_p, c_char_p, zlistx_p, zchunk_p, c_int, zhttp_client_fn, c_void_p]
+lib.zhttp_client_execute.restype = c_int
+lib.zhttp_client_execute.argtypes = [zhttp_client_p]
+lib.zhttp_client_wait.restype = c_int
+lib.zhttp_client_wait.argtypes = [zhttp_client_p, c_int]
+lib.zhttp_client_test.restype = None
+lib.zhttp_client_test.argtypes = [c_bool]
+
+class ZhttpClient(object):
+    """
+    Provides an http client, allowing multiple requests simultaneously and integrate easily with zpoller.
+    """
+
+    allow_destruct = False
+    def __init__(self, *args):
+        """
+        Create a new http client
+        """
+        if len(args) == 2 and type(args[0]) is c_void_p and isinstance(args[1], bool):
+            self._as_parameter_ = cast(args[0], zhttp_client_p) # Conversion from raw type to binding
+            self.allow_destruct = args[1] # This is a 'fresh' value, owned by us
+        elif len(args) == 2 and type(args[0]) is zhttp_client_p and isinstance(args[1], bool):
+            self._as_parameter_ = args[0] # Conversion from raw type to binding
+            self.allow_destruct = args[1] # This is a 'fresh' value, owned by us
+        else:
+            assert(len(args) == 1)
+            self._as_parameter_ = lib.zhttp_client_new(args[0]) # Creation of new raw type
+            self.allow_destruct = True
+
+    def __del__(self):
+        """
+        Destroy an http client
+        """
+        if self.allow_destruct:
+            lib.zhttp_client_destroy(byref(self._as_parameter_))
+
+    def __eq__(self, other):
+        if type(other) == type(self):
+            return other.c_address() == self.c_address()
+        elif type(other) == c_void_p:
+            return other.value == self.c_address()
+
+    def c_address(self):
+        """
+        Return the address of the object pointer in c.  Useful for comparison.
+        """
+        return addressof(self._as_parameter_.contents)
+
+    def __bool__(self):
+        "Determine whether the object is valid by converting to boolean" # Python 3
+        return self._as_parameter_.__bool__()
+
+    def __nonzero__(self):
+        "Determine whether the object is valid by converting to boolean" # Python 2
+        return self._as_parameter_.__nonzero__()
+
+    def get(self, url, headers, timeout, handler, arg):
+        """
+        Send a get request to the url, headers is optional.
+    Use arg to identify response when making multiple requests simultaneously.
+    Timeout is in milliseconds, use -1 or 0 to wait indefinitely.
+        """
+        return lib.zhttp_client_get(self._as_parameter_, url, headers, timeout, handler, arg)
+
+    def post(self, url, headers, body, timeout, handler, arg):
+        """
+        Send a post request to the url, headers is optional.
+Use arg to identify response when making multiple requests simultaneously.
+Timeout is in milliseconds, use -1 or 0 to wait indefinitely.
+        """
+        return lib.zhttp_client_post(self._as_parameter_, url, headers, body, timeout, handler, arg)
+
+    def execute(self):
+        """
+        Invoke callback function for received responses.
+Should be call after zpoller wait method.
+Returns 0 if OK, -1 on failure.
+        """
+        return lib.zhttp_client_execute(self._as_parameter_)
+
+    def wait(self, timeout):
+        """
+        Wait until a response is ready to be consumed.
+Use when you need a synchronize response.
+
+The timeout should be zero or greater, or -1 to wait indefinitely.
+
+Returns 0 if a response is ready, -1 and otherwise. errno will be set to EAGAIN if no response is ready.
+        """
+        return lib.zhttp_client_wait(self._as_parameter_, timeout)
+
+    @staticmethod
+    def test(verbose):
+        """
+        Self test of this class.
+        """
+        return lib.zhttp_client_test(verbose)
 
 ################################################################################
 #  THIS FILE IS 100% GENERATED BY ZPROJECT; DO NOT EDIT EXCEPT EXPERIMENTALLY  #

@@ -18,6 +18,7 @@ SET solution=czmq.sln
 SET version=10
 SET log=build.log
 SET tools=Microsoft Visual Studio %version%.0\VC\vcvarsall.bat
+if "%version%" == "15" SET tools=Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat
 SET environment="%programfiles(x86)%\%tools%"
 IF NOT EXIST %environment% SET environment="%programfiles%\%tools%"
 IF NOT EXIST %environment% GOTO no_tools
@@ -54,6 +55,14 @@ IF EXIST "..\..\..\..\lz4\builds/msvc/vs2010\lz4.import.props" (
     ECHO Building with lz4
 ) ELSE (
     ECHO Building without lz4
+)
+IF EXIST "..\..\..\..\libcurl\builds/msvc/vs2010\libcurl.import.props" (
+    COPY /Y "..\..\..\..\libcurl\builds/msvc/vs2010\libcurl.import.props" . > %log%
+    IF errorlevel 1 GOTO error
+    SET packages=%packages% /p:HAVE_LIBCURL=1
+    ECHO Building with libcurl
+) ELSE (
+    ECHO Building without libcurl
 )
 
 ECHO %action% CZMQ... (%packages%)

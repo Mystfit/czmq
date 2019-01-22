@@ -93,6 +93,7 @@
 
 // TODO- project.xml?
 #ifdef CZMQ_BUILD_DRAFT_API
+//  DRAFT-API: Security
 #define CZMQ_ZGOSSIP_ZAP_DOMAIN "global"
 #endif
 
@@ -123,7 +124,9 @@ struct _server_t {
 
     char *public_key;
     char *secret_key;
+
 #ifdef CZMQ_BUILD_DRAFT_API
+    //  DRAFT-API: Security
     char *zap_domain;
 #endif
 };
@@ -188,8 +191,10 @@ server_initialize (server_t *self)
     assert (self->tuples);
 
 #ifdef CZMQ_BUILD_DRAFT_API
+    // DRAFT-API: Security
     self->zap_domain = strdup(CZMQ_ZGOSSIP_ZAP_DOMAIN);
 #endif
+
     return 0;
 }
 
@@ -204,6 +209,7 @@ server_terminate (server_t *self)
     zstr_free (&self->public_key);
     zstr_free (&self->secret_key);
 #ifdef CZMQ_BUILD_DRAFT_API
+    //  DRAFT-API: Security
     zstr_free (&self->zap_domain);
 #endif
 }
@@ -211,6 +217,7 @@ server_terminate (server_t *self)
 //  Connect to a remote server
 static void
 #ifdef CZMQ_BUILD_DRAFT_API
+// DRAFT-API: Security
 server_connect (server_t *self, const char *endpoint, const char *public_key)
 #else
 server_connect (server_t *self, const char *endpoint)
@@ -220,6 +227,7 @@ server_connect (server_t *self, const char *endpoint)
     assert (remote);          //  No recovery if exhausted
 
 #ifdef CZMQ_BUILD_DRAFT_API
+    //  DRAFT-API: Security
     if (public_key){
         zcert_t *cert = zcert_new_from_txt (self->public_key, self->secret_key);
         zcert_apply(cert, remote);
@@ -314,6 +322,7 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
         char *endpoint = zmsg_popstr (msg);
         assert (endpoint);
 #ifdef CZMQ_BUILD_DRAFT_API
+        //  DRAFT-API: Security
         // leaving this in here for now because if/def changes the server_connect
         // function args. it doesn't look like server_connect is used anywhere else
         // but want to leave this in until we're sure this is stable..
@@ -330,6 +339,7 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
         char *key = zmsg_popstr (msg);
         char *value = zmsg_popstr (msg);
         server_accept (self, key, value);
+
         zstr_free (&key);
         zstr_free (&value);
     }
@@ -342,6 +352,7 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
         zmsg_addstrf (reply, "%d", (int) zhashx_size (self->tuples));
     }
 #ifdef CZMQ_BUILD_DRAFT_API
+    // DRAFT-API: Security
     else
     if (streq (method, "SET PUBLICKEY")) {
         char *key = zmsg_popstr (msg);
@@ -363,6 +374,21 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
         self->zap_domain = strdup(value);
         assert (self->zap_domain);
         zstr_free (&value);
+    }
+#endif
+
+#ifdef CZMQ_BUILD_DRAFT_API
+    // DRAFT-API: TTL
+    else
+    if (streq (method, "UNPUBLISH")) {
+        char *key = zmsg_popstr (msg);
+        assert (key);
+        tuple_t *tuple = (tuple_t *) zhashx_first (self->tuples);
+        assert(tuple);
+        if (tuple) {
+            zhashx_delete(self->tuples, key);
+        }
+       zstr_free (&key);
     }
 #endif
     else
@@ -543,13 +569,23 @@ zgossip_test (bool verbose)
 
     zactor_t *alpha = zactor_new (zgossip, "alpha");
     assert (alpha);
+
+    if (verbose)
+        zstr_send (alpha, "VERBOSE");
+
     zstr_sendx (alpha, "CONNECT", "inproc://base", NULL);
+
     zstr_sendx (alpha, "PUBLISH", "inproc://alpha-1", "service1", NULL);
     zstr_sendx (alpha, "PUBLISH", "inproc://alpha-2", "service2", NULL);
 
     zactor_t *beta = zactor_new (zgossip, "beta");
     assert (beta);
+
+    if (verbose)
+        zstr_send (beta, "VERBOSE");
+
     zstr_sendx (beta, "CONNECT", "inproc://base", NULL);
+
     zstr_sendx (beta, "PUBLISH", "inproc://beta-1", "service1", NULL);
     zstr_sendx (beta, "PUBLISH", "inproc://beta-2", "service2", NULL);
 
@@ -560,9 +596,11 @@ zgossip_test (bool verbose)
     char *command, *status, *key, *value;
 
     zstr_recvx (alpha, &command, &key, &value, NULL);
+
     assert (streq (command, "DELIVER"));
     assert (streq (key, "inproc://alpha-1"));
     assert (streq (value, "service1"));
+
     zstr_free (&command);
     zstr_free (&key);
     zstr_free (&value);
@@ -602,6 +640,7 @@ zgossip_test (bool verbose)
     zactor_destroy (&beta);
 
 #ifdef CZMQ_BUILD_DRAFT_API
+    //  DRAFT-API: Security
     // curve
     if (zsys_has_curve()) {
         if (verbose)

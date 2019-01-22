@@ -6,13 +6,18 @@
 */
 package org.zeromq.czmq;
 
+import org.scijava.nativelib.NativeLoader;
+
 public class Zclock {
     static {
-        try {
-            System.loadLibrary ("czmqjni");
-        }
-        catch (Exception e) {
-            System.exit (-1);
+        if (System.getProperty("java.vm.vendor").contains("Android")) {
+            System.loadLibrary("czmqjni");
+        } else {
+            try {
+                NativeLoader.loadLibrary("czmqjni");
+            } catch (Exception e) {
+                System.exit (-1);
+            }
         }
     }
     public long self;
@@ -20,7 +25,7 @@ public class Zclock {
     Sleep for a number of milliseconds
     */
     native static void __sleep (int msecs);
-    public void sleep (int msecs) {
+    public static void sleep (int msecs) {
         __sleep (msecs);
     }
     /*
@@ -29,7 +34,7 @@ public class Zclock {
     timers and time offsets. Use zclock_mono for that instead.
     */
     native static long __time ();
-    public long time () {
+    public static long time () {
         return __time ();
     }
     /*
@@ -38,7 +43,7 @@ public class Zclock {
     so will never be reset backwards, unlike a system clock.
     */
     native static long __mono ();
-    public long mono () {
+    public static long mono () {
         return __mono ();
     }
     /*
@@ -47,14 +52,14 @@ public class Zclock {
     so will never be reset backwards, unlike a system clock.
     */
     native static long __usecs ();
-    public long usecs () {
+    public static long usecs () {
         return __usecs ();
     }
     /*
     Return formatted date/time as fresh string. Free using zstr_free().
     */
     native static String __timestr ();
-    public String timestr () {
+    public static String timestr () {
         return __timestr ();
     }
     /*

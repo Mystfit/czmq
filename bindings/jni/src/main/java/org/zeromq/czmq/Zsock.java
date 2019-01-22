@@ -6,13 +6,18 @@
 */
 package org.zeromq.czmq;
 
+import org.scijava.nativelib.NativeLoader;
+
 public class Zsock implements AutoCloseable{
     static {
-        try {
-            System.loadLibrary ("czmqjni");
-        }
-        catch (Exception e) {
-            System.exit (-1);
+        if (System.getProperty("java.vm.vendor").contains("Android")) {
+            System.loadLibrary("czmqjni");
+        } else {
+            try {
+                NativeLoader.loadLibrary("czmqjni");
+            } catch (Exception e) {
+                System.exit (-1);
+            }
         }
     }
     public long self;
@@ -263,6 +268,7 @@ public class Zsock implements AutoCloseable{
         c = zchunk_t *
         f = zframe_t *
         h = zhashx_t *
+        l = zlistx_t * (DRAFT)
         U = zuuid_t *
         p = void * (sends the pointer value, only meaningful over inproc)
         m = zmsg_t * (sends all frames in the zmsg)
@@ -293,6 +299,7 @@ public class Zsock implements AutoCloseable{
         f = zframe_t ** (creates zframe)
         U = zuuid_t * (creates a zuuid with the data)
         h = zhashx_t ** (creates zhashx)
+        l = zlistx_t ** (creates zlistx) (DRAFT)
         p = void ** (stores pointer)
         m = zmsg_t ** (creates a zmsg with the remaining frames)
         z = null, asserts empty frame (0 arguments)
@@ -437,7 +444,7 @@ public class Zsock implements AutoCloseable{
     Takes a polymorphic socket reference.
     */
     native static boolean __is (long self);
-    public boolean is (long self) {
+    public static boolean is (long self) {
         return __is (self);
     }
     /*
@@ -447,8 +454,95 @@ public class Zsock implements AutoCloseable{
     return the supplied value. Takes a polymorphic socket reference.
     */
     native static long __resolve (long self);
-    public long resolve (long self) {
+    public static long resolve (long self) {
         return __resolve (self);
+    }
+    /*
+    Check whether the socket has available message to read.
+    */
+    native static boolean __hasIn (long self);
+    public boolean hasIn () {
+        return __hasIn (self);
+    }
+    /*
+    Get socket option `router_notify`.
+    Available from libzmq 4.3.0.
+    */
+    native static int __routerNotify (long self);
+    public int routerNotify () {
+        return __routerNotify (self);
+    }
+    /*
+    Set socket option `router_notify`.
+    Available from libzmq 4.3.0.
+    */
+    native static void __setRouterNotify (long self, int routerNotify);
+    public void setRouterNotify (int routerNotify) {
+        __setRouterNotify (self, routerNotify);
+    }
+    /*
+    Get socket option `multicast_loop`.
+    Available from libzmq 4.3.0.
+    */
+    native static int __multicastLoop (long self);
+    public int multicastLoop () {
+        return __multicastLoop (self);
+    }
+    /*
+    Set socket option `multicast_loop`.
+    Available from libzmq 4.3.0.
+    */
+    native static void __setMulticastLoop (long self, int multicastLoop);
+    public void setMulticastLoop (int multicastLoop) {
+        __setMulticastLoop (self, multicastLoop);
+    }
+    /*
+    Get socket option `metadata`.
+    Available from libzmq 4.3.0.
+    */
+    native static String __metadata (long self);
+    public String metadata () {
+        return __metadata (self);
+    }
+    /*
+    Set socket option `metadata`.
+    Available from libzmq 4.3.0.
+    */
+    native static void __setMetadata (long self, String metadata);
+    public void setMetadata (String metadata) {
+        __setMetadata (self, metadata);
+    }
+    /*
+    Get socket option `loopback_fastpath`.
+    Available from libzmq 4.3.0.
+    */
+    native static int __loopbackFastpath (long self);
+    public int loopbackFastpath () {
+        return __loopbackFastpath (self);
+    }
+    /*
+    Set socket option `loopback_fastpath`.
+    Available from libzmq 4.3.0.
+    */
+    native static void __setLoopbackFastpath (long self, int loopbackFastpath);
+    public void setLoopbackFastpath (int loopbackFastpath) {
+        __setLoopbackFastpath (self, loopbackFastpath);
+    }
+    /*
+    Get socket option `zap_enforce_domain`.
+    Available from libzmq 4.3.0.
+    */
+    native static int __zapEnforceDomain (long self);
+    public int zapEnforceDomain () {
+        return __zapEnforceDomain (self);
+    }
+    /*
+    Set socket option `zap_enforce_domain`.
+    Available from libzmq 4.3.0.
+    */
+    native static void __setZapEnforceDomain (long self, int zapEnforceDomain);
+    public void setZapEnforceDomain (int zapEnforceDomain) {
+        __setZapEnforceDomain (self, zapEnforceDomain);
     }
     /*
     Get socket option `gssapi_principal_nametype`.

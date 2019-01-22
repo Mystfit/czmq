@@ -82,6 +82,7 @@ static bool s_initialized = false;
 static size_t s_io_threads = 1;     //  ZSYS_IO_THREADS=1
 static int s_thread_sched_policy = -1; //  ZSYS_THREAD_SCHED_POLICY=-1
 static int s_thread_priority = -1;  //  ZSYS_THREAD_PRIORITY=-1
+static int s_thread_name_prefix = -1;  //  ZSYS_THREAD_NAME_PREFIX=-1
 static size_t s_max_sockets = 1024; //  ZSYS_MAX_SOCKETS=1024
 static int s_max_msgsz = INT_MAX;   //  ZSYS_MAX_MSGSZ=INT_MAX
 static int64_t s_file_stable_age_msec = S_DEFAULT_ZSYS_FILE_STABLE_AGE_MSEC;
@@ -258,6 +259,11 @@ zsys_init (void)
     else
         zsys_set_thread_sched_policy (s_thread_sched_policy);
 
+    if (getenv ("ZSYS_THREAD_NAME_PREFIX"))
+        zsys_set_thread_name_prefix (atoi (getenv ("ZSYS_THREAD_NAME_PREFIX")));
+    else
+        zsys_set_thread_name_prefix (s_thread_name_prefix);
+
     return s_process_ctx;
 }
 
@@ -312,6 +318,7 @@ zsys_shutdown (void)
       s_io_threads = 1;
       s_thread_sched_policy = -1;
       s_thread_priority = -1;
+      s_thread_name_prefix = -1;
       s_max_sockets = 1024;
       s_max_msgsz = INT_MAX;
       s_file_stable_age_msec = S_DEFAULT_ZSYS_FILE_STABLE_AGE_MSEC;
@@ -1417,6 +1424,98 @@ zsys_set_thread_sched_policy (int policy)
 
 
 //  --------------------------------------------------------------------------
+//  Configure the numeric prefix to each thread created for the internal
+//  context's thread pool. This option is only supported on Linux.
+//  If the environment variable ZSYS_THREAD_NAME_PREFIX is defined, that
+//  provides the default.
+//  Note that this method is valid only before any socket is created.
+
+void
+zsys_set_thread_name_prefix (int prefix)
+{
+    if (prefix < 0)
+        return;
+
+    zsys_init ();
+    ZMUTEX_LOCK (s_mutex);
+    //  If the app is misusing this method, burn it with fire
+    if (s_open_sockets)
+        zsys_error ("zsys_set_thread_name_prefix() is not valid after"
+                " creating sockets");
+    assert (s_open_sockets == 0);
+    s_thread_name_prefix = prefix;
+#if defined (ZMQ_THREAD_NAME_PREFIX)
+    zmq_ctx_set (s_process_ctx, ZMQ_THREAD_NAME_PREFIX, s_thread_name_prefix);
+#endif
+    ZMUTEX_UNLOCK (s_mutex);
+}
+
+//  --------------------------------------------------------------------------
+//  Return ZMQ_THREAD_NAME_PREFIX option.
+int
+zsys_thread_name_prefix ()
+{
+    zsys_init ();
+    ZMUTEX_LOCK (s_mutex);
+#if defined (ZMQ_THREAD_NAME_PREFIX)
+    s_thread_name_prefix = zmq_ctx_get (s_process_ctx, ZMQ_THREAD_NAME_PREFIX);
+#endif
+    ZMUTEX_UNLOCK (s_mutex);
+    return s_thread_name_prefix;
+}
+
+
+//  --------------------------------------------------------------------------
+//  Adds a specific CPU to the affinity list of the ZMQ context thread pool.
+//  This option is only supported on Linux.
+//  Note that this method is valid only before any socket is created.
+
+void
+zsys_thread_affinity_cpu_add (int cpu)
+{
+    if (cpu < 0)
+        return;
+
+    zsys_init ();
+    ZMUTEX_LOCK (s_mutex);
+    //  If the app is misusing this method, burn it with fire
+    if (s_open_sockets)
+        zsys_error ("zsys_set_thread_sched_policy() is not valid after"
+                " creating sockets");
+    assert (s_open_sockets == 0);
+#if defined (ZMQ_THREAD_AFFINITY_CPU_ADD)
+    zmq_ctx_set (s_process_ctx, ZMQ_THREAD_AFFINITY_CPU_ADD, cpu);
+#endif
+    ZMUTEX_UNLOCK (s_mutex);
+}
+
+
+//  --------------------------------------------------------------------------
+//  Removes a specific CPU to the affinity list of the ZMQ context thread pool.
+//  This option is only supported on Linux.
+//  Note that this method is valid only before any socket is created.
+
+void
+zsys_thread_affinity_cpu_remove (int cpu)
+{
+    if (cpu < 0)
+        return;
+
+    zsys_init ();
+    ZMUTEX_LOCK (s_mutex);
+    //  If the app is misusing this method, burn it with fire
+    if (s_open_sockets)
+        zsys_error ("zsys_set_thread_sched_policy() is not valid after"
+                " creating sockets");
+    assert (s_open_sockets == 0);
+#if defined (ZMQ_THREAD_AFFINITY_CPU_REMOVE)
+    zmq_ctx_set (s_process_ctx, ZMQ_THREAD_AFFINITY_CPU_REMOVE, cpu);
+#endif
+    ZMUTEX_UNLOCK (s_mutex);
+}
+
+
+//  --------------------------------------------------------------------------
 //  Configure the scheduling priority of the ZMQ context thread pool.
 //  Not available on Windows. See the sched_setscheduler man page or sched.h
 //  for more information. If the environment variable ZSYS_THREAD_PRIORITY is
@@ -1839,6 +1938,185 @@ zsys_auto_use_fd (void)
     return s_auto_use_fd;
 }
 
+typedef enum _zsprintf_s {
+    FIND_PERCENT,
+    FIND_KEY,
+    FIND_FORMAT,
+    END
+} zsprintf_s;
+
+typedef void* (*zsys_lookup_fn)(void *, const char*);
+
+static char *
+s_zsys_zprintf (const char *format, void *args, zsys_lookup_fn lookup_fn, bool validate)
+{
+    assert (format);
+    assert (args);
+    zchunk_t *chunk = zchunk_new (NULL, strlen (format) * 1.5);
+    assert (chunk);
+    char *ret = NULL;
+
+    zsprintf_s state = FIND_PERCENT;
+    size_t pos = 0;
+    char *key = NULL;
+
+    while (state != END)
+    {
+
+        if (pos >= strlen (format))
+            break;
+
+        switch (state) {
+            case FIND_PERCENT:
+                {
+
+                    //zsys_debug ("\tstate=FIND_PERCENT, format+%zu=%s", pos, format+pos);
+                    char *percent = strchr ((char*)(format) + pos, '%');
+
+                    if (!percent) {
+                        //zsys_debug ("!percent");
+                        zchunk_extend (chunk, (format+pos), strlen (format) - pos);
+                        state = END;
+                    }
+                    else
+                    if (*(percent+1) == '%') {
+                        size_t idx = percent - format;
+                        //zsys_debug ("*(percent+1)=='%%':\tidx=%zu, format+%zu=%s", idx, pos, format+pos);
+                        if (idx - pos > 0) {
+                            //zsys_debug ("*(percent+1)=='%%':\t#2pos=%zu, idx-pos=%zu", pos, idx-pos);
+                            zchunk_extend (chunk, format+pos, idx - pos);
+                            pos += (idx-pos);
+                            //zsys_debug ("*(percent+1)=='%%':\t#2pos=%zu, idx-pos=%zu", pos, idx-pos);
+                        }
+                        zchunk_extend (chunk, "%", 1);
+                        pos += 2;
+                    }
+                    else
+                    if (*(percent+1) == '(') {
+                        size_t idx = percent - format;
+                        //zsys_debug ("*(percent+1) == '(': idx=%zu, pos=%zu", idx, pos);
+                        if (idx - pos > 0) {
+                            zchunk_extend (chunk, (format+pos), idx - pos);
+                            pos += (idx-pos);
+                        }
+                        //zsys_debug ("*(percent+1) == '(': idx=%zu, pos=%zu", idx, pos);
+                        state = FIND_KEY;
+                    }
+                    else {
+                        //zsys_debug ("else");
+                        size_t idx = percent - format;
+                        zchunk_extend (chunk, (format+pos), idx - pos);
+                        pos += (idx-pos);
+                    }
+                }
+                break;
+            case FIND_KEY:
+                {
+                    //zsys_debug ("\tstate=FIND_KEY, format+%zu=%s", pos, format+pos);
+                    char *key_end = strchr ((char*)(format)+pos, ')');
+                    if (!key_end) {
+                        zchunk_extend (chunk, (format+pos), strlen (format) - pos);
+                        state = END;
+                    }
+                    pos += 2;
+                    size_t idx = key_end - format;
+                    size_t key_len = idx - pos;
+                    if (key_len == 0) {
+                        zchunk_extend (chunk, "()", 2);
+                        pos += 2;
+                        state = FIND_PERCENT;
+                    }
+                    zstr_free (&key);
+                    key = (char*) zmalloc (key_len + 1);
+                    memcpy ((void*) key, format+pos, key_len);
+
+                    if (! lookup_fn (args, key)) {
+                        char *ret = NULL;
+                        if (validate)
+                            ret = zsys_sprintf ("Key '%s' not found in hash", key);
+                        zstr_free (&key);
+                        zchunk_destroy (&chunk);
+                        return ret;
+                    }
+                    pos += key_len + 1;
+                    state = FIND_FORMAT;
+                }
+                break;
+            case FIND_FORMAT:
+                {
+                    //zsys_debug ("\tstate=FIND_FORMAT, format+%zu=%s", pos, format+pos);
+                    if (*(format+pos) != 's') {
+                        char *ret = NULL;
+                        if (validate)
+                            ret = zsys_sprintf ("%s: arguments other than 's' are not implemented", key);
+                        zstr_free (&key);
+                        zchunk_destroy (&chunk);
+                        return ret;
+                    }
+                    pos += 1;
+                    char *v = (char *) lookup_fn (args, key);
+                    zchunk_extend (chunk, v, strlen (v));
+                    state = FIND_PERCENT;
+                }
+                break;
+            case END:
+                break;
+        }
+    }
+    zstr_free (&key);
+
+    //FIXME: is it needed?
+    zchunk_extend (chunk, "\0", 1);
+
+    if (!validate) {
+        ret = strdup ((char*) zchunk_data (chunk));
+        zchunk_destroy (&chunk);
+        return ret;
+    }
+
+    zchunk_destroy (&chunk);
+    return NULL;
+}
+
+
+// printf based on zhash_t
+char *
+zsys_zprintf (const char *format, zhash_t *args)
+{
+    return s_zsys_zprintf (format, (void*) args, (zsys_lookup_fn) zhash_lookup, false);
+}
+
+// return missing key or other format errors as new allocated string or NULL
+char *
+zsys_zprintf_error (const char *format, zhash_t *args)
+{
+    return s_zsys_zprintf (format, (void*) args, (zsys_lookup_fn) zhash_lookup, true);
+}
+
+static void *
+s_zconfig_lookup (void *container, const char *key)
+{
+    zconfig_t *root = (zconfig_t*) container;
+    zconfig_t *child = zconfig_locate (root, key);
+    if (child)
+        return zconfig_value (child);
+    return NULL;
+}
+
+// printf based on zconfig
+char *
+zsys_zplprintf (const char *format, zconfig_t *args)
+{
+    return s_zsys_zprintf (format, (void*) args, (zsys_lookup_fn) s_zconfig_lookup, false);
+}
+
+// return missing key or other format errors as new allocated string or NULL
+char *
+zsys_zplprintf_error (const char *format, zconfig_t *args)
+{
+    return s_zsys_zprintf (format, (void*) args, (zsys_lookup_fn) s_zconfig_lookup, true);
+}
+
 
 //  --------------------------------------------------------------------------
 //  Set log identity, which is a string that prefixes all log messages sent
@@ -2107,6 +2385,10 @@ zsys_test (bool verbose)
     zsys_set_ipv6 (0);
     zsys_set_thread_priority (-1);
     zsys_set_thread_sched_policy (-1);
+    zsys_set_thread_name_prefix (0);
+    assert (0 == zsys_thread_name_prefix());
+    zsys_thread_affinity_cpu_add (0);
+    zsys_thread_affinity_cpu_remove (0);
     zsys_set_zero_copy_recv(0);
     assert (0 == zsys_zero_copy_recv());
     zsys_set_zero_copy_recv(1);
@@ -2286,6 +2568,54 @@ zsys_test (bool verbose)
         zstr_free (&received);
     }
     zsys_close (logger, NULL, 0);
+
+    {
+        // zhash based printf
+        zhash_t *args = zhash_new ();
+        zhash_insert (args, "key", "value");
+        zhash_insert (args, "ham", "spam");
+
+        char *str = zsys_zprintf ("plain string", args);
+        assert (streq (str, "plain string"));
+        zstr_free (&str);
+
+        str = zsys_zprintf ("%%a%%", args);
+        assert (streq (str, "%a%"));
+        zstr_free (&str);
+
+        str = zsys_zprintf ("VALUE=%(key)s123", args);
+        assert (streq (str, "VALUE=value123"));
+        zstr_free (&str);
+
+        str = zsys_zprintf ("VALUE=%(key)s123, %(ham)s, %(ham)s, %%(nospam)s!!!", args);
+        assert (streq (str, "VALUE=value123, spam, spam, %(nospam)s!!!"));
+        zstr_free (&str);
+
+        str = zsys_zprintf ("VALUE=%(nokey)s123, %(ham)s, %(ham)s, %%(nospam)s!!!", args);
+        assert (!str);
+
+        str = zsys_zprintf_error ("VALUE=%(nokey)s123, %(ham)s, %(ham)s, %%(nospam)s!!!", args);
+        assert (streq (str, "Key 'nokey' not found in hash"));
+        zstr_free (&str);
+
+        str = zsys_zprintf ("VALUE=%(key)s/%%S", args);
+        assert (streq (str, "VALUE=value/%S"));
+        zstr_free (&str);
+
+        zhash_destroy (&args);
+
+        //ZPL based printf
+        zconfig_t *root = zconfig_new ("root", NULL);
+        zconfig_put (root, "zsp", "");
+        zconfig_put (root, "zsp/return_code", "0");
+
+        str = zsys_zplprintf ("return_code=%(zsp/return_code)s", root);
+        assert (streq (str, "return_code=0"));
+        zstr_free (&str);
+
+        zconfig_destroy (&root);
+    }
+
     //  @end
 
     zsys_set_auto_use_fd (1);

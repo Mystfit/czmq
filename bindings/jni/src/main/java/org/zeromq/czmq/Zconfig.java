@@ -6,13 +6,18 @@
 */
 package org.zeromq.czmq;
 
+import org.scijava.nativelib.NativeLoader;
+
 public class Zconfig implements AutoCloseable{
     static {
-        try {
-            System.loadLibrary ("czmqjni");
-        }
-        catch (Exception e) {
-            System.exit (-1);
+        if (System.getProperty("java.vm.vendor").contains("Android")) {
+            System.loadLibrary("czmqjni");
+        } else {
+            try {
+                NativeLoader.loadLibrary("czmqjni");
+            } catch (Exception e) {
+                System.exit (-1);
+            }
         }
     }
     public long self;
@@ -189,15 +194,14 @@ public class Zconfig implements AutoCloseable{
     existing data).
     */
     native static long __reload (long self);
-    public int reload () {
+    public void reload () {
         self = __reload (self);
-        return 0;
     }
     /*
     Load a config tree from a memory chunk
     */
     native static long __chunkLoad (long chunk);
-    public Zconfig chunkLoad (Zchunk chunk) {
+    public static Zconfig chunkLoad (Zchunk chunk) {
         return new Zconfig (__chunkLoad (chunk.self));
     }
     /*
@@ -211,7 +215,7 @@ public class Zconfig implements AutoCloseable{
     Load a config tree from a null-terminated string
     */
     native static long __strLoad (String string);
-    public Zconfig strLoad (String string) {
+    public static Zconfig strLoad (String string) {
         return new Zconfig (__strLoad (string));
     }
     /*
@@ -238,12 +242,10 @@ public class Zconfig implements AutoCloseable{
     }
     /*
     Destroy node and subtree (all children)
-    WARNING: manually fixed void -> long
     */
     native static long __remove (long self);
-    public long remove () {
+    public void remove () {
         self = __remove (self);
-        return 0;
     }
     /*
     Print properties of object

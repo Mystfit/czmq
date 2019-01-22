@@ -32,9 +32,14 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
     export LANG LC_ALL
 
     if [ -d "./tmp" ]; then
+        # Proto installation area for this project and its deps
         rm -rf ./tmp
     fi
-    mkdir -p tmp
+    if [ -d "./tmp-deps" ]; then
+        # Checkout/unpack and build area for dependencies
+        rm -rf ./tmp-deps
+    fi
+    mkdir -p tmp tmp-deps
     BUILD_PREFIX=$PWD/tmp
 
     PATH="`echo "$PATH" | sed -e 's,^/usr/lib/ccache/?:,,' -e 's,:/usr/lib/ccache/?:,,' -e 's,:/usr/lib/ccache/?$,,' -e 's,^/usr/lib/ccache/?$,,'`"
@@ -183,8 +188,9 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'libzmq' from Git repository..." >&2
+        cd ./tmp-deps
         $CI_TIME git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git libzmq
-        cd libzmq
+        cd ./libzmq
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -244,6 +250,42 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         CONFIG_OPTS+=("--with-liblz4=yes")
     fi
 
+    # Start of recipe for dependency: libcurl
+    if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libcurl4-nss-dev >/dev/null 2>&1) || \
+           (command -v brew >/dev/null 2>&1 && brew ls --versions libcurl >/dev/null 2>&1) \
+    ; then
+        echo ""
+        BASE_PWD=${PWD}
+        echo "`date`: INFO: Building prerequisite 'libcurl' from Git repository..." >&2
+        cd ./tmp-deps
+        $CI_TIME git clone --quiet --depth 1 https://github.com/curl/curl.git libcurl
+        cd ./libcurl
+        CCACHE_BASEDIR=${PWD}
+        export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+        if [ -e autogen.sh ]; then
+            $CI_TIME ./autogen.sh 2> /dev/null
+        fi
+        if [ -e buildconf ]; then
+            $CI_TIME ./buildconf 2> /dev/null
+        fi
+        if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+            $CI_TIME libtoolize --copy --force && \
+            $CI_TIME aclocal -I . && \
+            $CI_TIME autoheader && \
+            $CI_TIME automake --add-missing --copy && \
+            $CI_TIME autoconf || \
+            $CI_TIME autoreconf -fiv
+        fi
+        $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+        $CI_TIME make -j4
+        $CI_TIME make install
+        cd "${BASE_PWD}"
+        CONFIG_OPTS+=("--with-libcurl=yes")
+    else
+        CONFIG_OPTS+=("--with-libcurl=yes")
+    fi
+
     # Build and check this project; note that zprojects always have an autogen.sh
     echo ""
     echo "`date`: INFO: Starting build of currently tested project with DRAFT APIs..."
@@ -280,14 +322,18 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
     make check-gitignore
     echo "==="
 
+    if [ "$CI_TEST_DISTCHECK" = false ]; then
+        make check
+    else
     (
-        export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=yes ${CONFIG_OPTS[@]}"
-        $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck
-
-        echo "=== Are GitIgnores good after 'make distcheck' with drafts?"
-        make check-gitignore
-        echo "==="
+        export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=yes ${CONFIG_OPTS[@]}" && \
+        $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck || exit $?
     )
+    fi
+
+    echo "=== Are GitIgnores good after 'make (dist)check' with drafts?"
+    make check-gitignore
+    echo "==="
 
     # Build and check this project without DRAFT APIs
     echo ""
@@ -300,14 +346,18 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         $CI_TIME ./autogen.sh 2> /dev/null
         $CI_TIME ./configure --enable-drafts=no "${CONFIG_OPTS[@]}"
         $CI_TIME make VERBOSE=1 all || exit $?
+        if [ "$CI_TEST_DISTCHECK" = false ]; then
+            make check
+        else
         (
             export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=no ${CONFIG_OPTS[@]}" && \
             $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck || exit $?
         )
+        fi
     ) || exit 1
     [ -z "$CI_TIME" ] || echo "`date`: Builds completed without fatal errors!"
 
-    echo "=== Are GitIgnores good after 'make distcheck' without drafts?"
+    echo "=== Are GitIgnores good after 'make (dist)check' without drafts?"
     make check-gitignore
     echo "==="
 

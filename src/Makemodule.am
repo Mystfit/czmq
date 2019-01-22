@@ -60,7 +60,8 @@ src_libczmq_la_SOURCES += \
     src/zargs.c \
     src/zproc.c \
     src/ztimerset.c \
-    src/ztrie.c
+    src/ztrie.c \
+    src/zhttp_client.c
 
 endif
 
@@ -151,6 +152,7 @@ dist_api_DATA = \
     api/ztimerset.api \
     api/ztrie.api \
     api/zuuid.api \
+    api/zhttp_client.api \
     api/zgossip_msg.api
 
 # define custom target for all products of /src
@@ -303,6 +305,16 @@ else
 coverage: src/czmq_selftest
 	@echo "call make clean && configure --with-gcov to enable code coverage"
 	@exit 1
+endif
+
+bindings: python-bindings
+
+python-bindings:
+if ENABLE_BINDINGS_PYTHON
+	-( cd bindings/python && python setup.py install )
+else
+	@echo "Python Bindings not enabled or missing setup.py... skipping"
+
 endif
 
 # A series of tests that the codebase and recipes are pretty, easy

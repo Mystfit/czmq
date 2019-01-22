@@ -165,6 +165,7 @@ class Zchunk: public Nan::ObjectWrap {
     static NAN_METHOD (_strdup);
     static NAN_METHOD (_streq);
     static NAN_METHOD (_pack);
+    static NAN_METHOD (_packx);
     static NAN_METHOD (_unpack);
     static NAN_METHOD (_digest);
     static NAN_METHOD (_print);
@@ -487,6 +488,7 @@ class Zlistx: public Nan::ObjectWrap {
     static NAN_METHOD (_purge);
     static NAN_METHOD (_sort);
     static NAN_METHOD (_dup);
+    static NAN_METHOD (_pack);
     static NAN_METHOD (_test);
 };
 
@@ -636,6 +638,17 @@ class Zsock: public Nan::ObjectWrap {
     static NAN_METHOD (_flush);
     static NAN_METHOD (_join);
     static NAN_METHOD (_leave);
+    static NAN_METHOD (_has_in);
+    static NAN_METHOD (_router_notify);
+    static NAN_METHOD (_set_router_notify);
+    static NAN_METHOD (_multicast_loop);
+    static NAN_METHOD (_set_multicast_loop);
+    static NAN_METHOD (_metadata);
+    static NAN_METHOD (_set_metadata);
+    static NAN_METHOD (_loopback_fastpath);
+    static NAN_METHOD (_set_loopback_fastpath);
+    static NAN_METHOD (_zap_enforce_domain);
+    static NAN_METHOD (_set_zap_enforce_domain);
     static NAN_METHOD (_gssapi_principal_nametype);
     static NAN_METHOD (_set_gssapi_principal_nametype);
     static NAN_METHOD (_gssapi_service_principal_nametype);
@@ -842,6 +855,10 @@ class Zsys: public Nan::ObjectWrap {
     static NAN_METHOD (_set_io_threads);
     static NAN_METHOD (_set_thread_sched_policy);
     static NAN_METHOD (_set_thread_priority);
+    static NAN_METHOD (_set_thread_name_prefix);
+    static NAN_METHOD (_thread_name_prefix);
+    static NAN_METHOD (_thread_affinity_cpu_add);
+    static NAN_METHOD (_thread_affinity_cpu_remove);
     static NAN_METHOD (_set_max_sockets);
     static NAN_METHOD (_socket_limit);
     static NAN_METHOD (_set_max_msgsz);
@@ -865,6 +882,10 @@ class Zsys: public Nan::ObjectWrap {
     static NAN_METHOD (_ipv6_mcast_address);
     static NAN_METHOD (_set_auto_use_fd);
     static NAN_METHOD (_auto_use_fd);
+    static NAN_METHOD (_zprintf);
+    static NAN_METHOD (_zprintf_error);
+    static NAN_METHOD (_zplprintf);
+    static NAN_METHOD (_zplprintf_error);
     static NAN_METHOD (_set_logident);
     static NAN_METHOD (_set_logsender);
     static NAN_METHOD (_set_logsystem);
@@ -942,6 +963,24 @@ class Zuuid: public Nan::ObjectWrap {
     static NAN_METHOD (_eq);
     static NAN_METHOD (_neq);
     static NAN_METHOD (_dup);
+    static NAN_METHOD (_test);
+};
+
+class ZhttpClient: public Nan::ObjectWrap {
+    public:
+        static NAN_MODULE_INIT (Init);
+        explicit ZhttpClient (bool verbose);
+        explicit ZhttpClient (zhttp_client_t *self);
+        zhttp_client_t *self;
+    private:
+        ~ZhttpClient ();
+    static Nan::Persistent <Function> &constructor ();
+
+    static NAN_METHOD (New);
+    static NAN_METHOD (destroy);
+    static NAN_METHOD (defined);
+    static NAN_METHOD (_execute);
+    static NAN_METHOD (_wait);
     static NAN_METHOD (_test);
 };
 

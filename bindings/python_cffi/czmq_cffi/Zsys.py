@@ -297,6 +297,38 @@ class Zsys(object):
         """
         utils.lib.zsys_set_thread_priority(priority)
 
+    def set_thread_name_prefix(prefix):
+        """
+        Configure the numeric prefix to each thread created for the internal
+        context's thread pool. This option is only supported on Linux.
+        If the environment variable ZSYS_THREAD_NAME_PREFIX is defined, that
+        provides the default.
+        Note that this method is valid only before any socket is created.
+        """
+        utils.lib.zsys_set_thread_name_prefix(prefix)
+
+    def thread_name_prefix():
+        """
+        Return thread name prefix.
+        """
+        return utils.lib.zsys_thread_name_prefix()
+
+    def thread_affinity_cpu_add(cpu):
+        """
+        Adds a specific CPU to the affinity list of the ZMQ context thread pool.
+        This option is only supported on Linux.
+        Note that this method is valid only before any socket is created.
+        """
+        utils.lib.zsys_thread_affinity_cpu_add(cpu)
+
+    def thread_affinity_cpu_remove(cpu):
+        """
+        Removes a specific CPU to the affinity list of the ZMQ context thread pool.
+        This option is only supported on Linux.
+        Note that this method is valid only before any socket is created.
+        """
+        utils.lib.zsys_thread_affinity_cpu_remove(cpu)
+
     def set_max_sockets(max_sockets):
         """
         Configure the number of sockets that ZeroMQ will allow. The default
@@ -484,6 +516,46 @@ class Zsys(object):
         Return use of automatic pre-allocated FDs for zsock instances.
         """
         return utils.lib.zsys_auto_use_fd()
+
+    def zprintf(format, args):
+        """
+        Print formatted string. Format is specified by variable names
+        in Python-like format style
+
+        "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+        become
+        "key=value"
+
+        Returns freshly allocated string or NULL in a case of error.
+        Not enough memory, invalid format specifier, name not in args
+        """
+        return utils.lib.zsys_zprintf(utils.to_bytes(format), args._p)
+
+    def zprintf_error(format, args):
+        """
+        Return error string for given format/args combination.
+        """
+        return utils.lib.zsys_zprintf_error(utils.to_bytes(format), args._p)
+
+    def zplprintf(format, args):
+        """
+        Print formatted string. Format is specified by variable names
+        in Python-like format style
+
+        "%(KEY)s=%(VALUE)s", KEY=key, VALUE=value
+        become
+        "key=value"
+
+        Returns freshly allocated string or NULL in a case of error.
+        Not enough memory, invalid format specifier, name not in args
+        """
+        return utils.lib.zsys_zplprintf(utils.to_bytes(format), args._p)
+
+    def zplprintf_error(format, args):
+        """
+        Return error string for given format/args combination.
+        """
+        return utils.lib.zsys_zplprintf_error(utils.to_bytes(format), args._p)
 
     def set_logident(value):
         """

@@ -288,8 +288,6 @@
 #   include <netinet/in.h>          //  Must come before arpa/inet.h
 #   if (!defined (__UTYPE_IBMAIX)) && (!defined (__UTYPE_HPUX))
 #       if(defined(__UTYPE_ANDROID))
-#           pragma message("Compiling for Android. __ANDROID_API__ value is ")
-#           pragma message(__ANDROID_API__)
 #           if(defined(__ANDROID_API__)) && (__ANDROID_API__ >= 24)
 #               include <ifaddrs.h>
 #           endif

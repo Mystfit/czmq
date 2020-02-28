@@ -102,6 +102,11 @@ if( "${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore" AND "${CMAKE_SYSTEM_VERSION}"
   ADD_DEFINITIONS(-D_WIN32_WINNT=_WIN32_WINNT_WIN10)
 endif()
 
+# Android cross-compilation builds require the NDK log library
+if(ANDROID)
+  find_library(ANDROID_LOG log)
+  list(APPEND MORE_LIBRARIES ${ANDROID_LOG})
+endif()
 
 # required libraries for mingw
 if (MINGW)

@@ -105,6 +105,7 @@ endif()
 # Android cross-compilation builds require the NDK log library
 if(ANDROID)
   find_library(ANDROID_LOG log)
+  ADD_DEFINITIONS(-DCZMQ_HAVE_ANDROID)
   list(APPEND MORE_LIBRARIES ${ANDROID_LOG})
 endif()
 

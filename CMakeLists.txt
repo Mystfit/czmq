@@ -120,6 +120,7 @@ if (CYGWIN)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${SOURCE_DIR}")
+set(MORE_LIBRARIES_STATIC ${MORE_LIBRARIES})
 set(OPTIONAL_LIBRARIES)
 set(OPTIONAL_LIBRARIES_STATIC)
 
@@ -129,7 +130,8 @@ set(OPTIONAL_LIBRARIES_STATIC)
 find_package(libzmq REQUIRED)
 IF (LIBZMQ_FOUND)
     include_directories(${LIBZMQ_INCLUDE_DIRS})
-    list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
+    list(APPEND MORE_LIBRARIES libzmq)
+    list(APPEND MORE_LIBRARIES_STATIC libzmq-static)
   IF (PC_LIBZMQ_FOUND)
       set(pkg_config_names_private "${pkg_config_names_private} libzmq")
       list(APPEND OPTIONAL_LIBRARIES_STATIC ${PC_LIBZMQ_STATIC_LDFLAGS})
@@ -460,7 +462,7 @@ if (CZMQ_BUILD_STATIC)
   )
 
   target_link_libraries(czmq-static
-    PUBLIC ${MORE_LIBRARIES}
+    PUBLIC ${MORE_LIBRARIES_STATIC}
   )
 
   install(TARGETS czmq-static

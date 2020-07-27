@@ -108,6 +108,12 @@ if( "${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore" AND "${CMAKE_SYSTEM_VERSION}"
   ADD_DEFINITIONS(-D_WIN32_WINNT=_WIN32_WINNT_WIN10)
 endif()
 
+# Android cross-compilation builds require the NDK log library
+if(ANDROID)
+  find_library(ANDROID_LOG log)
+  ADD_DEFINITIONS(-DCZMQ_HAVE_ANDROID)
+  list(APPEND MORE_LIBRARIES ${ANDROID_LOG})
+endif()
 
 # required libraries for mingw
 if (MINGW)
@@ -120,6 +126,7 @@ if (CYGWIN)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${SOURCE_DIR}")
+set(MORE_LIBRARIES_STATIC ${MORE_LIBRARIES})
 set(OPTIONAL_LIBRARIES)
 set(OPTIONAL_LIBRARIES_STATIC)
 
@@ -161,7 +168,7 @@ IF (CZMQ_WITH_UUID AND UUID_FOUND)
     list(APPEND MORE_LIBRARIES ${UUID_LIBRARIES})
   IF (PC_UUID_FOUND)
       set(pkg_config_names_private "${pkg_config_names_private} uuid")
-      list(APPEND OPTIONAL_LIBRARIES_STATIC ${PC_UUID_STATIC_LDFLAGS})
+      list(APPEND ${PC_UUID_STATIC_LDFLAGS})
   ELSE (PC_UUID_FOUND)
       set(pkg_config_libs_private "${pkg_config_libs_private} -luuid")
   ENDIF (PC_UUID_FOUND)

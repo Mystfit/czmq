@@ -642,6 +642,8 @@ class Zsock: public Nan::ObjectWrap {
     static NAN_METHOD (_leave);
     static NAN_METHOD (_has_in);
     static NAN_METHOD (_set_only_first_subscribe);
+    static NAN_METHOD (_set_hello_msg);
+    static NAN_METHOD (_set_disconnect_msg);
     static NAN_METHOD (_set_wss_trust_system);
     static NAN_METHOD (_set_wss_hostname);
     static NAN_METHOD (_set_wss_trust_pem);
@@ -892,6 +894,7 @@ class Zsys: public Nan::ObjectWrap {
     static NAN_METHOD (_pipehwm);
     static NAN_METHOD (_set_ipv6);
     static NAN_METHOD (_ipv6);
+    static NAN_METHOD (_ipv6_available);
     static NAN_METHOD (_set_interface);
     static NAN_METHOD (_interface);
     static NAN_METHOD (_set_ipv6_address);

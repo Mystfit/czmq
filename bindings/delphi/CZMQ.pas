@@ -1584,6 +1584,14 @@ uses
     // Available from libzmq 4.3.0.
     procedure SetOnlyFirstSubscribe(OnlyFirstSubscribe: Integer);
 
+    // Set socket option `hello_msg`.
+    // Available from libzmq 4.3.0.
+    procedure SetHelloMsg(const HelloMsg: IZframe);
+
+    // Set socket option `disconnect_msg`.
+    // Available from libzmq 4.3.0.
+    procedure SetDisconnectMsg(const DisconnectMsg: IZframe);
+
     // Set socket option `wss_trust_system`.
     // Available from libzmq 4.3.0.
     procedure SetWssTrustSystem(WssTrustSystem: Integer);
@@ -4283,6 +4291,17 @@ uses
     // Create a SCATTER socket. Default action is connect.
     constructor NewScatter(const Endpoint: string);
 
+    // Create a DGRAM (UDP) socket. Default action is bind.
+    // The endpoint is a string consisting of a
+    // 'transport'`://` followed by an 'address'. As this is
+    // a UDP socket the 'transport' has to be 'udp'. The
+    // 'address' specifies the ip address and port to
+    // bind to. For example:  udp://127.0.0.1:1234
+    // Note: To send to an endpoint over UDP you have to
+    // send a message with the destination endpoint address
+    // as a first message!
+    constructor NewDgram(const Endpoint: string);
+
     // Destroy the socket. You must use this for any socket created via the
     // zsock_new method.
     destructor Destroy; override;
@@ -4509,6 +4528,14 @@ uses
     // Set socket option `only_first_subscribe`.
     // Available from libzmq 4.3.0.
     procedure SetOnlyFirstSubscribe(OnlyFirstSubscribe: Integer);
+
+    // Set socket option `hello_msg`.
+    // Available from libzmq 4.3.0.
+    procedure SetHelloMsg(const HelloMsg: IZframe);
+
+    // Set socket option `disconnect_msg`.
+    // Available from libzmq 4.3.0.
+    procedure SetDisconnectMsg(const DisconnectMsg: IZframe);
 
     // Set socket option `wss_trust_system`.
     // Available from libzmq 4.3.0.
@@ -5528,6 +5555,11 @@ uses
 
     // Return use of IPv6 for zsock instances.
     class function Ipv6: Integer;
+
+    // Test if ipv6 is available on the system. Return true if available.
+    // The only way to reliably check is to actually open a socket and
+    // try to bind it. (ported from libzmq)
+    class function Ipv6Available: Boolean;
 
     // Set network interface name to use for broadcasts, particularly zbeacon.
     // This lets the interface be configured for test environments where required.
@@ -8453,6 +8485,14 @@ end;
     Create(zsock_new_scatter(PAnsiChar(__Endpoint__)), True);
   end;
 
+  constructor TZsock.NewDgram(const Endpoint: string);
+  var
+    __Endpoint__: UTF8String;
+  begin
+    __Endpoint__ := UTF8String(Endpoint);
+    Create(zsock_new_dgram(PAnsiChar(__Endpoint__)), True);
+  end;
+
   constructor TZsock.Create(handle: PZsock; owned: Boolean);
   begin
     FHandle := handle;
@@ -8642,6 +8682,16 @@ end;
   procedure TZsock.SetOnlyFirstSubscribe(OnlyFirstSubscribe: Integer);
   begin
     zsock_set_only_first_subscribe(FHandle, OnlyFirstSubscribe);
+  end;
+
+  procedure TZsock.SetHelloMsg(const HelloMsg: IZframe);
+  begin
+    zsock_set_hello_msg(FHandle, TZframe.UnWrap(HelloMsg));
+  end;
+
+  procedure TZsock.SetDisconnectMsg(const DisconnectMsg: IZframe);
+  begin
+    zsock_set_disconnect_msg(FHandle, TZframe.UnWrap(DisconnectMsg));
   end;
 
   procedure TZsock.SetWssTrustSystem(WssTrustSystem: Integer);
@@ -9968,6 +10018,11 @@ end;
   class function TZsys.Ipv6: Integer;
   begin
     Result := zsys_ipv6;
+  end;
+
+  class function TZsys.Ipv6Available: Boolean;
+  begin
+    Result := zsys_ipv6_available;
   end;
 
   class procedure TZsys.SetInterface(const Value: string);

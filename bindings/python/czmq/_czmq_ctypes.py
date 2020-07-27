@@ -5199,6 +5199,8 @@ lib.zsock_new_gather.restype = zsock_p
 lib.zsock_new_gather.argtypes = [c_char_p]
 lib.zsock_new_scatter.restype = zsock_p
 lib.zsock_new_scatter.argtypes = [c_char_p]
+lib.zsock_new_dgram.restype = zsock_p
+lib.zsock_new_dgram.argtypes = [c_char_p]
 lib.zsock_bind.restype = c_int
 lib.zsock_bind.argtypes = [zsock_p, c_char_p]
 lib.zsock_endpoint.restype = c_char_p
@@ -5249,6 +5251,10 @@ lib.zsock_has_in.restype = c_bool
 lib.zsock_has_in.argtypes = [zsock_p]
 lib.zsock_set_only_first_subscribe.restype = None
 lib.zsock_set_only_first_subscribe.argtypes = [zsock_p, c_int]
+lib.zsock_set_hello_msg.restype = None
+lib.zsock_set_hello_msg.argtypes = [zsock_p, zframe_p]
+lib.zsock_set_disconnect_msg.restype = None
+lib.zsock_set_disconnect_msg.argtypes = [zsock_p, zframe_p]
 lib.zsock_set_wss_trust_system.restype = None
 lib.zsock_set_wss_trust_system.argtypes = [zsock_p, c_int]
 lib.zsock_set_wss_hostname.restype = None
@@ -5769,6 +5775,21 @@ action is connect.
         """
         return Zsock(lib.zsock_new_scatter(endpoint), True)
 
+    @staticmethod
+    def new_dgram(endpoint):
+        """
+        Create a DGRAM (UDP) socket. Default action is bind.
+The endpoint is a string consisting of a
+'transport'`://` followed by an 'address'. As this is
+a UDP socket the 'transport' has to be 'udp'. The
+'address' specifies the ip address and port to
+bind to. For example:  udp://127.0.0.1:1234
+Note: To send to an endpoint over UDP you have to
+send a message with the destination endpoint address
+as a first message!
+        """
+        return Zsock(lib.zsock_new_dgram(endpoint), True)
+
     def bind(self, format, *args):
         """
         Bind a socket to a formatted endpoint. For tcp:// endpoints, supports
@@ -6061,6 +6082,20 @@ return the supplied value. Takes a polymorphic socket reference.
 Available from libzmq 4.3.0.
         """
         return lib.zsock_set_only_first_subscribe(self._as_parameter_, only_first_subscribe)
+
+    def set_hello_msg(self, hello_msg):
+        """
+        Set socket option `hello_msg`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_set_hello_msg(self._as_parameter_, hello_msg)
+
+    def set_disconnect_msg(self, disconnect_msg):
+        """
+        Set socket option `disconnect_msg`.
+Available from libzmq 4.3.0.
+        """
+        return lib.zsock_set_disconnect_msg(self._as_parameter_, disconnect_msg)
 
     def set_wss_trust_system(self, wss_trust_system):
         """
@@ -7534,6 +7569,8 @@ lib.zsys_set_ipv6.restype = None
 lib.zsys_set_ipv6.argtypes = [c_int]
 lib.zsys_ipv6.restype = c_int
 lib.zsys_ipv6.argtypes = []
+lib.zsys_ipv6_available.restype = c_bool
+lib.zsys_ipv6_available.argtypes = []
 lib.zsys_set_interface.restype = None
 lib.zsys_set_interface.argtypes = [c_char_p]
 lib.zsys_interface.restype = c_char_p
@@ -8119,6 +8156,15 @@ default. Note: has no effect on ZMQ v2.
         Return use of IPv6 for zsock instances.
         """
         return lib.zsys_ipv6()
+
+    @staticmethod
+    def ipv6_available():
+        """
+        Test if ipv6 is available on the system. Return true if available.
+The only way to reliably check is to actually open a socket and
+try to bind it. (ported from libzmq)
+        """
+        return lib.zsys_ipv6_available()
 
     @staticmethod
     def set_interface(value):

@@ -2586,6 +2586,20 @@ Set socket option `only_first_subscribe`.
 Available from libzmq 4.3.0.
 
 ```
+nothing my_zsock.setHelloMsg (Zframe)
+```
+
+Set socket option `hello_msg`.
+Available from libzmq 4.3.0.
+
+```
+nothing my_zsock.setDisconnectMsg (Zframe)
+```
+
+Set socket option `disconnect_msg`.
+Available from libzmq 4.3.0.
+
+```
 nothing my_zsock.setWssTrustSystem (Number)
 ```
 
@@ -4260,6 +4274,14 @@ integer my_zsys.ipv6 ()
 ```
 
 Return use of IPv6 for zsock instances.
+
+```
+boolean my_zsys.ipv6Available ()
+```
+
+Test if ipv6 is available on the system. Return true if available.
+The only way to reliably check is to actually open a socket and
+try to bind it. (ported from libzmq)
 
 ```
 nothing my_zsys.setInterface (String)

@@ -126,7 +126,6 @@ if (CYGWIN)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${SOURCE_DIR}")
-set(MORE_LIBRARIES_STATIC ${MORE_LIBRARIES})
 set(OPTIONAL_LIBRARIES)
 set(OPTIONAL_LIBRARIES_STATIC)
 
@@ -141,6 +140,7 @@ find_package(ZeroMQ CONFIG)
 IF(ZeroMQ_FOUND)
   list(APPEND REQUIRED_LIBRARIES libzmq)
   list(APPEND REQUIRED_LIBRARIES_STATIC libzmq-static)
+  message(STATUS "Using ZeroMQ from CMake package")
 ELSE()
   # Fallback to findlibzmq.cmake
   find_package(libzmq REQUIRED)

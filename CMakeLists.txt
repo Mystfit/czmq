@@ -26,6 +26,12 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/builds/cm
 set(pkg_config_libs_private "")
 set(pkg_config_names_private "")
 
+# Make sure to not exclude sysroot include directories when cross-compiling for Android
+if(ANDROID)
+    unset(CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES)
+    unset(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES)
+endif()
+
 ########################################################################
 # options
 ########################################################################

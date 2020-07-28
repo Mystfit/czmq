@@ -108,6 +108,12 @@ if( "${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore" AND "${CMAKE_SYSTEM_VERSION}"
   ADD_DEFINITIONS(-D_WIN32_WINNT=_WIN32_WINNT_WIN10)
 endif()
 
+# Android cross-compilation builds require the NDK log library
+if(ANDROID)
+  find_library(ANDROID_LOG log)
+  ADD_DEFINITIONS(-DCZMQ_HAVE_ANDROID)
+  list(APPEND MORE_LIBRARIES ${ANDROID_LOG})
+endif()
 
 # required libraries for mingw
 if (MINGW)
@@ -126,19 +132,31 @@ set(OPTIONAL_LIBRARIES_STATIC)
 ########################################################################
 # LIBZMQ dependency
 ########################################################################
-find_package(libzmq REQUIRED)
-IF (LIBZMQ_FOUND)
-    include_directories(${LIBZMQ_INCLUDE_DIRS})
-    list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
-  IF (PC_LIBZMQ_FOUND)
-      set(pkg_config_names_private "${pkg_config_names_private} libzmq")
-      list(APPEND OPTIONAL_LIBRARIES_STATIC ${PC_LIBZMQ_STATIC_LDFLAGS})
-  ELSE (PC_LIBZMQ_FOUND)
-      set(pkg_config_libs_private "${pkg_config_libs_private} -lzmq")
-  ENDIF (PC_LIBZMQ_FOUND)
-ELSE (LIBZMQ_FOUND)
-    message( FATAL_ERROR "libzmq not found." )
-ENDIF (LIBZMQ_FOUND)
+# Find libzmq using cmake package config file
+set(REQUIRED_LIBRARIES)
+set(REQUIRED_LIBRARIES_STATIC)
+find_package(ZeroMQ CONFIG)
+IF(ZeroMQ_FOUND)
+  list(APPEND REQUIRED_LIBRARIES libzmq)
+  list(APPEND REQUIRED_LIBRARIES_STATIC libzmq-static)
+  get_target_property(LIBZMQ_INCLUDE_DIRS libzmq-static INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(${LIBZMQ_INCLUDE_DIRS})
+ELSE()
+  # Fallback to findlibzmq.cmake
+  find_package(libzmq REQUIRED)
+  IF (LIBZMQ_FOUND)
+      include_directories(${LIBZMQ_INCLUDE_DIRS})
+      list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
+    IF (PC_LIBZMQ_FOUND)
+        set(pkg_config_names_private "${pkg_config_names_private} libzmq")
+        list(APPEND OPTIONAL_LIBRARIES_STATIC ${PC_LIBZMQ_STATIC_LDFLAGS})
+    ELSE (PC_LIBZMQ_FOUND)
+        set(pkg_config_libs_private "${pkg_config_libs_private} -lzmq")
+    ENDIF (PC_LIBZMQ_FOUND)
+  ELSE (LIBZMQ_FOUND)
+      message( FATAL_ERROR "libzmq not found." )
+  ENDIF (LIBZMQ_FOUND)
+ENDIF(ZeroMQ_FOUND)
 
 ########################################################################
 # UUID dependency
@@ -423,7 +441,7 @@ if (CZMQ_BUILD_SHARED)
   )
 
   target_link_libraries(czmq
-    PUBLIC ${MORE_LIBRARIES}
+    PUBLIC ${MORE_LIBRARIES} ${REQUIRED_LIBRARIES}
   )
 
   install(TARGETS czmq
@@ -460,7 +478,7 @@ if (CZMQ_BUILD_STATIC)
   )
 
   target_link_libraries(czmq-static
-    PUBLIC ${MORE_LIBRARIES}
+    PUBLIC ${MORE_LIBRARIES} ${REQUIRED_LIBRARIES_STATIC}
   )
 
   install(TARGETS czmq-static
